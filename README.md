@@ -2,7 +2,8 @@
 
 Casa de leilões de **cartas colecionáveis de Magic: The Gathering**. O leiloeiro busca uma carta na API pública do [Scryfall](https://scryfall.com/docs/api) e monta um lote. Os licitantes depositam saldo simulado e disputam o lote com lances ao vivo. Quem vence recebe um comprovante assinado, com link para compartilhar. Qualquer pessoa, mesmo sem login, pode auditar o histórico de lances de um lote e conferir que ele não foi adulterado.
 
-> **Deploy:** _(link público aqui)_
+> **Deploy:** https://martelo-leiloes.up.railway.app
+>
 > **Contas de demonstração** (senha `demo1234`): `leiloeiro@demo.com` · `ana@demo.com` · `bruno@demo.com`. A tela de login tem botões de acesso rápido.
 
 | Vitrine | Sala do lote (ao vivo) | Auditoria pública |
@@ -147,6 +148,8 @@ O seed ([`apps/api/src/seed/seed.ts`](apps/api/src/seed/seed.ts)) passa pelos **
 | Shivan Dragon, Serra Angel | Encerrados e arrematados (com comprovante) |
 | Tarmogoyf | Encerrado sem lances |
 | Mox Sapphire | Cancelado depois de receber lance: mostra o estorno no extrato da Ana |
+
+No deploy público, o banco é compartilhado. Os dados mudam com o uso, inclusive o de quem está avaliando: as tabelas acima mostram o estado logo depois do seed.
 
 ---
 
