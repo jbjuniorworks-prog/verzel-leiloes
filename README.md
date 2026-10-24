@@ -359,8 +359,21 @@ O projeto vira **uma única imagem Docker** ([`Dockerfile`](Dockerfile)), que ro
 
 1. Novo projeto → *Deploy from GitHub repo* → selecionar este repositório.
 2. Adicionar um **PostgreSQL** ao projeto e, no serviço da aplicação, criar `DATABASE_URL = ${{Postgres.DATABASE_URL}}`.
-3. Gerar os segredos com `npm run keys:generate` e cadastrar `JWT_SECRET`, `AUDIT_PRIVATE_KEY` e `PSEUDONYM_SECRET`, além de `SEED_ON_BOOT=true`.
+3. Gerar segredos **novos** com `npm run keys:generate` e cadastrar as variáveis do serviço:
+
+   | Variável | Valor |
+   | --- | --- |
+   | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (Postgres do próprio projeto) |
+   | `JWT_SECRET` | gerado pelo `keys:generate` |
+   | `AUDIT_PRIVATE_KEY` | gerado pelo `keys:generate`. Guarde uma cópia: trocar depois invalida a verificação do histórico já assinado |
+   | `PSEUDONYM_SECRET` | gerado pelo `keys:generate` |
+   | `SEED_ON_BOOT` | `true`: cria os dados de demonstração só se o banco estiver vazio; redeploys não duplicam nem apagam nada |
+   | `PORT` | não precisa: o Railway injeta e a aplicação usa |
+
+   `NODE_ENV=production` já vem do `Dockerfile`. Não defina `ALLOW_DEMO_SECRETS`.
 4. *Settings → Networking → Generate Domain*.
+
+A cada deploy o container aplica as migrations pendentes (`prisma migrate deploy`) **antes** de subir o servidor, e o Railway só envia tráfego depois que `/api/health` responde.
 
 Qualquer plataforma que rode um container com Postgres (Render, Fly.io, uma VPS com `docker compose`) funciona do mesmo jeito.
 
