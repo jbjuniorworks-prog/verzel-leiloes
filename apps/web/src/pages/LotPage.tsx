@@ -6,6 +6,7 @@ import { Link, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { computeLotStatus, validateBid, type LotDetailDTO, type PublicBidDTO, type WalletBalanceDTO } from '@leilao/shared';
 import { SESSION_KEY, useAuth, type Session } from '../auth/AuthContext';
+import { CardText } from '../components/CardText';
 import { CurrencyInput } from '../components/CurrencyInput';
 import { Countdown, ItemImage, StatusBadge } from '../components/lot-bits';
 import { Alert, Badge, Button, buttonClass, Card, EmptyState, LoadError, Spinner } from '../components/ui';
@@ -110,12 +111,21 @@ function LotRoom({ lot }: { lot: LotDetailDTO }) {
             <div className="min-w-0 space-y-5 max-md:order-5">
               {lot.description && <p className="leading-relaxed whitespace-pre-line text-stone-700 wrap-anywhere dark:text-stone-300">{lot.description}</p>}
 
+              {lot.cardText && (
+                <div className="rounded-xl border border-stone-200 p-4 dark:border-stone-800">
+                  <p className="mb-1.5 text-xs text-stone-500">Texto da carta (regras oficiais, em inglês, como no Scryfall)</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-line text-stone-700 wrap-anywhere dark:text-stone-300">
+                    <CardText text={lot.cardText} />
+                  </p>
+                </div>
+              )}
+
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-stone-200 p-4 text-sm dark:border-stone-800">
                 {lot.attributes.map((attribute) => (
                   <div key={attribute.label} className="min-w-0">
                     <dt className="text-xs text-stone-500">{attribute.label}</dt>
                     <dd className="truncate font-medium" title={attribute.value}>
-                      {attribute.value}
+                      <CardText text={attribute.value} />
                     </dd>
                   </div>
                 ))}

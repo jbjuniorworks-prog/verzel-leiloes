@@ -306,7 +306,8 @@ export async function getLotDetail(lotId: string, viewer: AuthUser | undefined, 
 
   return {
     ...toLotSummary(lot, now),
-    description: lot.description ?? lot.item.description,
+    description: lot.description,
+    cardText: lot.item.description,
     attributes: (lot.item.attributes ?? []) as unknown as ItemAttribute[],
     externalUrl: lot.item.externalUrl,
     originalEndsAt: lot.originalEndsAt.toISOString(),

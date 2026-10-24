@@ -21,6 +21,7 @@ export const AUDIT_ALGORITHM = 'SHA-256 (hash encadeado) + Ed25519 (assinatura)'
 type CreatedData = {
   item?: { externalId?: string };
   title?: string;
+  description?: string | null;
   startingPriceCents?: string;
   minIncrementCents?: string;
   startsAt?: string;
@@ -49,15 +50,16 @@ function checkConsistency(lot: Lot & { item: { externalId: string } }, rows: Lot
   if (genesis?.type === 'LOT_CREATED') {
     const data = genesis.data as CreatedData;
     const terms: Array<[string, unknown, unknown]> = [
-      ['lance inicial', data.startingPriceCents, lot.startingPriceCents.toString()],
-      ['incremento mínimo', data.minIncrementCents, lot.minIncrementCents.toString()],
-      ['início', data.startsAt, lot.startsAt.toISOString()],
-      ['fim original', data.endsAt, lot.originalEndsAt.toISOString()],
-      ['título', data.title, lot.title],
-      ['item', data.item?.externalId, lot.item.externalId],
+      ['o lance inicial', data.startingPriceCents, lot.startingPriceCents.toString()],
+      ['o incremento mínimo', data.minIncrementCents, lot.minIncrementCents.toString()],
+      ['o início', data.startsAt, lot.startsAt.toISOString()],
+      ['o fim original', data.endsAt, lot.originalEndsAt.toISOString()],
+      ['o título', data.title, lot.title],
+      ['a descrição', data.description ?? null, lot.description],
+      ['o item', data.item?.externalId, lot.item.externalId],
     ];
     for (const [label, signed, current] of terms) {
-      if (signed !== current) mismatch(`As condições do lote foram alteradas: o ${label} atual difere do registrado na criação.`);
+      if (signed !== current) mismatch(`As condições do lote foram alteradas: ${label} atual difere do que foi registrado na criação.`);
     }
   }
 

@@ -94,7 +94,10 @@ export interface LotViewerDTO {
 }
 
 export interface LotDetailDTO extends LotSummaryDTO {
+  /** Escrita pelo leiloeiro (estado de conservação etc.). */
   description: string | null;
+  /** Texto de regras da carta, como veio da API externa (em inglês, com símbolos entre chaves). */
+  cardText: string | null;
   attributes: ItemAttribute[];
   externalUrl: string | null;
   originalEndsAt: string;

@@ -88,6 +88,11 @@ describe('histórico à prova de adulteração', () => {
     expect((await issues()).codes).toContain('STATE_MISMATCH');
   });
 
+  it('detecta descrição do lote trocada direto na tabela (ela é exibida na sala)', async () => {
+    await prisma.$executeRawUnsafe(`UPDATE lots SET description = 'Near Mint, nunca usada' WHERE id = '${lotId}'`);
+    expect((await issues()).codes).toEqual(['STATE_MISMATCH']);
+  });
+
   it('a auditoria pública não expõe dados pessoais', async () => {
     const body = JSON.stringify(await getLotAudit(lotId));
     expect(body).not.toContain(ana.id);

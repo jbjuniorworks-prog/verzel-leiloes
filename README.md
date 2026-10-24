@@ -59,7 +59,7 @@ Casa de leilões de **cartas colecionáveis de Magic: The Gathering**. O leiloei
 - **Busca e filtro de lotes:** texto (título, coleção, artista), raridade, faixa de preço, ordenação e contagem por aba.
 - **Cancelamento com estorno automático:** o leiloeiro pode cancelar mesmo com lances; o valor comprometido do líder volta na hora para o saldo disponível dele.
 - **Docker Compose:** `docker compose up --build` sobe banco + aplicação já com dados.
-- **Testes automatizados:** 78 testes (unitários + integração contra Postgres real, incluindo concorrência, permissões e adulteração).
+- **Testes automatizados:** 79 testes (unitários + integração contra Postgres real, incluindo concorrência, permissões e adulteração).
 - **Dark mode:** claro / escuro / seguir o sistema, sem "piscar" no carregamento. Com "reduzir movimento" ativado no sistema, pulsos, zoom e destaques animados viram estados fixos.
 
 **Stack:** React 19 + Vite + Tailwind CSS 4 + TanStack Query · Node.js 22 + Express 5 + Prisma 6 + Socket.IO · PostgreSQL 17 · TypeScript em tudo, num monorepo com npm workspaces.
@@ -272,7 +272,7 @@ Cada lote tem um log append-only (`lot_events`): `LOT_CREATED` (gênese, com as 
 | Remover o(s) último(s) lance(s) e "consertar" o lote | a cabeça assinada não bate (`BAD_HEAD_SIGNATURE`) |
 | Inserir um lance forjado | assinatura inválida + tamanho da cadeia diferente |
 | Reatribuir um lance a outro usuário (`actor_id`) | pseudônimo não corresponde ao HMAC do usuário (`STATE_MISMATCH`) |
-| Mudar preço, líder, fim ou condições direto na tabela `lots` | estado do lote diverge da cadeia (`STATE_MISMATCH`) |
+| Mudar preço, líder, fim, condições, título ou descrição direto na tabela `lots` | estado do lote diverge da cadeia (`STATE_MISMATCH`) |
 
 **Defesa em profundidade:** o trigger `lot_events_append_only` impede `UPDATE`/`DELETE` acidentais ou pela aplicação. A detecção, porém, **não depende dele**: um DBA pode desligá-lo, e os testes fazem justamente isso.
 
@@ -360,7 +360,7 @@ npm test
 ```
 
 - **`packages/shared` (33 testes, unitários):** regras de lance, anti-sniping, status, conversão de dinheiro, canonicalização e verificação da cadeia contra cada tipo de adulteração.
-- **`apps/api` (45 testes, integração contra Postgres real):**
+- **`apps/api` (46 testes, integração contra Postgres real):**
   - regras de lance e saldo comprometido;
   - **concorrência:** 8 lances simultâneos de mesmo valor → exatamente 1 aceito; lances crescentes simultâneos; o mesmo licitante em dois lotes ao mesmo tempo não compromete mais do que tem; **cancelamento e liquidação disputando o mesmo lote** → só uma transição vence, nunca estorno e cobrança juntos, no máximo um comprovante, e repetir não move saldo;
   - anti-sniping, liquidação, cancelamento com estorno e idempotência;
@@ -406,11 +406,17 @@ Qualquer plataforma que rode um container com Postgres (Render, Fly.io, uma VPS 
 - **Reinício do servidor:** o estado vive no banco e o agendador roda assim que a aplicação sobe, então lotes que venceram com o servidor fora do ar são liquidados no boot, com o horário real da liquidação registrado na cadeia.
 - **Liquidação leva até ~1 s** depois do fim. Nesse intervalo a sala mostra "Encerrado — liquidando…". Lances já são recusados nesse período, porque a regra olha o relógio, não a liquidação.
 - **Lances que não lideram não comprometem saldo.** Só o líder tem valor preso; ao ser superado, o valor volta na hora.
+- **O líder não vê o formulário de lance.** Em vez dele, a sala mostra "Você é o líder: não é possível cobrir o próprio lance". A recusa `ALREADY_WINNING` ("Você já está ganhando este lote…") só aparece se o pedido chegar à API mesmo assim: chamada direta, outra aba desatualizada ou clique duplo.
+- **Limites de requisição:** login e cadastro somam até 20 tentativas por minuto **por IP**; lances, até 20 a cada 10 segundos **por usuário**. Acima disso a API responde 429 ("Muitas tentativas…" / "Muitos lances em sequência…"). Várias pessoas testando ao mesmo tempo na mesma rede compartilham o limite de login.
 - **O leiloeiro não tem depósito.** A carteira dele só recebe o valor das vendas (aparece no painel). Leiloeiros não dão lance nem em lotes de outros leiloeiros.
 - **Cancelar lote com lances é permitido** (opcional do desafio), com estorno automático. Lotes cancelados somem da vitrine, mas continuam acessíveis pelo link direto e pela auditoria. Lote encerrado não pode ser cancelado.
 - **Busca de itens em inglês:** o Scryfall indexa nomes em inglês. A busca traz todas as impressões da carta, ordenadas pelo valor de mercado em dólar. O valor em dólar aparece só como referência, sem conversão para real.
+- **Texto da carta em inglês:** a sala mostra as regras oficiais da carta como o Scryfall entrega, em inglês, num bloco separado da descrição do leiloeiro. Os símbolos que o Scryfall escreve entre chaves (`{T}`, `{U}`, `{2}`…) aparecem como selos, como na carta impressa.
 - **Datas:** a interface mostra no fuso do navegador; as mensagens de erro geradas pelo servidor usam o horário de Brasília (está escrito na mensagem).
 - **Verificação no navegador** precisa de suporte a Ed25519 no WebCrypto (Chrome 137+, Firefox 129+, Safari 17+). Em navegador antigo, a página avisa e mostra só o veredito do servidor.
-- **Trocar a `AUDIT_PRIVATE_KEY`** muda a chave pública, e o histórico assinado antes deixa de verificar. Não implementei rotação de chaves (exigiria guardar um id de chave por evento).
+- **Trocar os segredos de auditoria quebra a verificação do que já existe:**
+  - **`AUDIT_PRIVATE_KEY`:** muda a chave pública, e o histórico assinado antes deixa de verificar. Não implementei rotação de chaves (exigiria guardar um id de chave por evento).
+  - **`PSEUDONYM_SECRET`:** os pseudônimos são `HMAC(segredo, lote:usuário)`. Com outro segredo, o servidor recalcula pseudônimos diferentes dos gravados nos eventos, e toda auditoria com lances passa a acusar "lance reatribuído". Os pseudônimos exibidos aos usuários também mudam.
+  - **`JWT_SECRET`:** trocá-lo só encerra as sessões abertas.
 - **Escala:** foi pensado para uma instância. A liquidação já é segura com várias (`SKIP LOCKED`), mas o Socket.IO precisaria do adaptador Redis para os eventos chegarem a clientes conectados em outras instâncias.
 - **Fora do escopo** (como o desafio indica): nota fiscal, revenda entre usuários, app nativo e recuperação de senha.

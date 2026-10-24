@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import type { CatalogItemDTO, CatalogSearchDTO, CreateLotInput, LotSummaryDTO } from '@leilao/shared';
+import { CardText } from '../components/CardText';
 import { CurrencyInput } from '../components/CurrencyInput';
 import { ItemImage } from '../components/lot-bits';
 import { Alert, Badge, Button, Card, EmptyState, Field, Input, inputClass, PageHeader, Spinner } from '../components/ui';
@@ -232,7 +233,9 @@ function LotForm({ item, onBack }: { item: CatalogItemDTO; onBack: () => void })
           {item.attributes.slice(0, 7).map((attribute) => (
             <div key={attribute.label} className="flex justify-between gap-3">
               <span className="text-stone-500">{attribute.label}</span>
-              <span className="truncate text-right font-medium">{attribute.value}</span>
+              <span className="truncate text-right font-medium">
+                <CardText text={attribute.value} />
+              </span>
             </div>
           ))}
         </Card>
