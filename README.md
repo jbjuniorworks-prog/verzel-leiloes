@@ -121,11 +121,12 @@ Outros comandos úteis:
 | `PSEUDONYM_SECRET` | sim | Segredo do HMAC que gera os pseudônimos dos licitantes |
 | `PORT` | não | Padrão `3333` (Docker/Railway usam `3000`/`$PORT`) |
 | `SEED_ON_BOOT` | não | `true` cria os dados de demonstração na subida (idempotente) |
+| `ALLOW_DEMO_SECRETS` | não | Em produção, a aplicação **se recusa a subir** com os segredos públicos de demonstração. O `docker-compose.yml` local liga esta flag; no deploy, nunca |
 | `COOKIE_SECURE` | não | Padrão `true` em produção. Use `false` para rodar em `http://` |
 | `SCRYFALL_BASE_URL` | não | Padrão `https://api.scryfall.com`. Aponte para algo inválido para simular a API fora do ar |
 | `TEST_DATABASE_URL` | não | Banco dos testes (padrão `…/leilao_test`) |
 
-Fora de produção, os três segredos têm valores padrão de desenvolvimento, para o projeto subir sem configuração. Em produção, a falta de qualquer um derruba a aplicação logo na subida, com mensagem explicando o que falta.
+Fora de produção, os três segredos têm valores padrão de desenvolvimento, para o projeto subir sem configuração. Em produção, a falta de qualquer um, ou o uso dos valores de demonstração que estão neste repositório, derruba a aplicação logo na subida, com mensagem explicando o que falta.
 
 ### Contas e dados de demonstração
 

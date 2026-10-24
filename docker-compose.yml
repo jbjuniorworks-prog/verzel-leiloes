@@ -33,6 +33,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-troque-em-producao-0123456789abcdef}
       AUDIT_PRIVATE_KEY: ${AUDIT_PRIVATE_KEY:-ZGV2LW9ubHktYXVkaXQta2V5LW5vdC1mb3ItcHJvZCE=}
       PSEUDONYM_SECRET: ${PSEUDONYM_SECRET:-dev-pseudonym-secret-troque-em-producao}
+      # Sem isto a aplicação se recusa a subir em produção com os segredos públicos acima.
+      ALLOW_DEMO_SECRETS: 'true'
       COOKIE_SECURE: 'false'
       SEED_ON_BOOT: 'true'
     ports:
