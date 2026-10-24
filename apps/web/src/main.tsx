@@ -1,15 +1,22 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 import { App } from './App';
-import { AuthProvider } from './auth/AuthContext';
+import { AuthProvider, SESSION_KEY } from './auth/AuthContext';
 import { ApiError } from './lib/api';
 import { syncServerClock } from './lib/clock';
 import { ThemeProvider } from './lib/theme';
 import './index.css';
 
+// Sessão expirou (ou saiu em outra aba): esquece o usuário e as telas protegidas mandam para o login.
+const onAuthError = (error: unknown) => {
+  if (error instanceof ApiError && error.status === 401) queryClient.setQueryData(SESSION_KEY, null);
+};
+
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({ onError: onAuthError }),
+  mutationCache: new MutationCache({ onError: onAuthError }),
   defaultOptions: {
     queries: {
       staleTime: 15_000,

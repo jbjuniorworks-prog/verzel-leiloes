@@ -7,9 +7,10 @@ import { toast } from 'sonner';
 import type { WalletBalanceDTO, WalletDTO, WalletTransactionType } from '@leilao/shared';
 import { SESSION_KEY, type Session } from '../auth/AuthContext';
 import { CurrencyInput } from '../components/CurrencyInput';
-import { Alert, Button, Card, EmptyState, PageHeader, Spinner } from '../components/ui';
+import { Button, Card, EmptyState, LoadError, PageHeader, Spinner } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { formatBRL, formatDateTime } from '../lib/format';
+import { usePageTitle } from '../lib/page-title';
 
 const TX_META: Record<WalletTransactionType, { label: string; icon: typeof Wallet; tone: string }> = {
   DEPOSIT: { label: 'Depósito', icon: PiggyBank, tone: 'text-emerald-600 dark:text-emerald-400' },
@@ -36,8 +37,10 @@ export function WalletPage() {
     onError: (error) => toast.error('Depósito não realizado', { description: errorMessage(error) }),
   });
 
+  usePageTitle('Carteira');
+
   if (wallet.isPending) return <Spinner />;
-  if (wallet.isError) return <Alert tone="danger">{errorMessage(wallet.error)}</Alert>;
+  if (!wallet.data) return <LoadError title="Não foi possível carregar a carteira" error={wallet.error} onRetry={() => void wallet.refetch()} />;
   const data = wallet.data;
 
   return (
@@ -48,7 +51,7 @@ export function WalletPage() {
         description="Saldo simulado para dar lances. Enquanto você lidera um lote, o valor do lance fica comprometido; se for superado, volta na hora para o disponível."
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         {[
           { label: 'Saldo total', value: data.balanceCents, hint: 'Tudo o que está na carteira', className: '' },
           { label: 'Comprometido', value: data.committedCents, hint: 'Em lances que você lidera', className: 'text-amber-600 dark:text-amber-400' },
@@ -61,14 +64,15 @@ export function WalletPage() {
         ].map((stat) => (
           <Card key={stat.label} className="p-5">
             <p className="text-sm text-stone-500">{stat.label}</p>
-            <p className={clsx('font-display text-3xl font-semibold tabular-nums', stat.className)}>{formatBRL(stat.value)}</p>
+            <p className={clsx('font-display text-2xl font-semibold tabular-nums wrap-break-word lg:text-3xl', stat.className)}>{formatBRL(stat.value)}</p>
             <p className="mt-1 text-xs text-stone-500">{stat.hint}</p>
           </Card>
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
-        <div className="space-y-6">
+      {/* minmax(0, …): sem isso, a linha mais longa do extrato (que é truncada) alarga a coluna e a página rola de lado. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-6">
           <Card className="space-y-4 p-5">
             <h2 className="font-display text-xl font-semibold">Depósito simulado</h2>
             <form
@@ -127,27 +131,33 @@ export function WalletPage() {
                 const meta = TX_META[tx.type];
                 const Icon = meta.icon;
                 return (
-                  <li key={tx.id} className="flex items-center gap-3 py-3">
+                  // Duas linhas (descrição + valor / detalhes + disponível) em vez de duas colunas:
+                  // no celular a coluna da descrição ficava estreita demais.
+                  <li key={tx.id} className="flex items-start gap-3 py-3">
                     <span className={clsx('grid size-9 shrink-0 place-items-center rounded-full bg-stone-100 dark:bg-stone-800', meta.tone)}>
                       <Icon className="size-4" />
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{tx.description}</p>
-                      <p className="text-xs text-stone-500">
-                        {meta.label} · {formatDateTime(tx.createdAt)}
-                        {tx.lotId && (
-                          <>
-                            {' · '}
-                            <Link to={`/lotes/${tx.lotId}`} className="hover:underline">
-                              lote #{tx.lotNumber}
-                            </Link>
-                          </>
-                        )}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className={clsx('font-semibold tabular-nums', meta.tone)}>{formatBRL(tx.amountCents)}</p>
-                      <p className="text-xs text-stone-500 tabular-nums">disp. {formatBRL(tx.balanceAfterCents - tx.committedAfterCents)}</p>
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className="truncate text-sm font-medium" title={tx.description}>
+                          {tx.description}
+                        </p>
+                        <p className={clsx('shrink-0 font-semibold tabular-nums', meta.tone)}>{formatBRL(tx.amountCents)}</p>
+                      </div>
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs text-stone-500">
+                        <p>
+                          {meta.label} · {formatDateTime(tx.createdAt)}
+                          {tx.lotId && (
+                            <>
+                              {' · '}
+                              <Link to={`/lotes/${tx.lotId}`} className="hover:underline">
+                                lote #{tx.lotNumber}
+                              </Link>
+                            </>
+                          )}
+                        </p>
+                        <p className="tabular-nums">disp. {formatBRL(tx.balanceAfterCents - tx.committedAfterCents)}</p>
+                      </div>
                     </div>
                   </li>
                 );

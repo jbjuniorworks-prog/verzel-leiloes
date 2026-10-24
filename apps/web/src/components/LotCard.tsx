@@ -1,4 +1,4 @@
-import { Gavel } from 'lucide-react';
+import { Gavel, Timer } from 'lucide-react';
 import { Link } from 'react-router';
 import { computeLotStatus, type LotSummaryDTO } from '@leilao/shared';
 import { useNow } from '../lib/clock';
@@ -30,20 +30,22 @@ export function LotCard({ lot }: { lot: LotSummaryDTO }) {
           <p className="truncate text-xs text-stone-500 dark:text-stone-400">{lot.subtitle}</p>
         </div>
 
-        <div className="mt-auto flex items-end justify-between gap-2 border-t border-stone-100 pt-3 dark:border-stone-800">
-          <div>
+        <div className="mt-auto flex items-end justify-between gap-3 border-t border-stone-100 pt-3 dark:border-stone-800">
+          <div className="min-w-0">
             <p className="text-[11px] font-medium tracking-wide text-stone-500 uppercase">
               {status === 'ENDED' ? (lot.result === 'SOLD' ? 'Arrematado por' : 'Lance inicial') : lot.currentPriceCents ? 'Lance atual' : 'Lance inicial'}
             </p>
             <p className="text-lg font-bold tabular-nums">{formatBRL(price)}</p>
           </div>
-          <div className="text-right text-xs text-stone-500 dark:text-stone-400">
+          <div className="shrink-0 text-right text-xs text-stone-500 dark:text-stone-400">
             {status === 'LIVE' && (
               <>
                 <p className="flex items-center justify-end gap-1">
                   <Gavel className="size-3" aria-hidden /> {lot.bidCount} {lot.bidCount === 1 ? 'lance' : 'lances'}
                 </p>
-                <Countdown target={lot.endsAt} prefix="termina em " className="text-sm whitespace-nowrap text-stone-700 dark:text-stone-300" />
+                <p className="flex items-center justify-end gap-1 text-sm whitespace-nowrap text-stone-700 dark:text-stone-300" title="Tempo até o fim">
+                  <Timer className="size-3.5" aria-label="termina em" /> <Countdown target={lot.endsAt} />
+                </p>
               </>
             )}
             {status === 'SCHEDULED' && (
@@ -53,7 +55,9 @@ export function LotCard({ lot }: { lot: LotSummaryDTO }) {
               </>
             )}
             {status === 'ENDED' && (
-              <p className="font-medium">{lot.result === 'SOLD' ? `${lot.bidCount} lances` : lot.result === 'UNSOLD' ? 'Sem lances' : 'Liquidando…'}</p>
+              <p className="font-medium">
+                {lot.result === 'SOLD' ? `${lot.bidCount} ${lot.bidCount === 1 ? 'lance' : 'lances'}` : lot.result === 'UNSOLD' ? 'Sem lances' : 'Liquidando…'}
+              </p>
             )}
           </div>
         </div>

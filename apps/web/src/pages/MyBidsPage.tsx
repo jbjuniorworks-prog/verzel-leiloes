@@ -6,9 +6,10 @@ import { Link } from 'react-router';
 import { toast } from 'sonner';
 import type { ParticipationDTO, ParticipationOutcome } from '@leilao/shared';
 import { Countdown, ItemImage } from '../components/lot-bits';
-import { Alert, Badge, buttonClass, Card, EmptyState, PageHeader, Spinner, type BadgeTone } from '../components/ui';
-import { api, errorMessage } from '../lib/api';
+import { Badge, buttonClass, Card, EmptyState, LoadError, PageHeader, Spinner, type BadgeTone } from '../components/ui';
+import { api } from '../lib/api';
 import { formatBRL, formatDateTime } from '../lib/format';
+import { usePageTitle } from '../lib/page-title';
 
 const OUTCOME: Record<ParticipationOutcome, { label: string; tone: BadgeTone }> = {
   LEADING: { label: 'Ganhando', tone: 'success' },
@@ -38,8 +39,10 @@ export function MyBidsPage() {
   const [tab, setTab] = useState<(typeof TABS)[number]['id']>('active');
   const query = useQuery({ queryKey: ['participations'], queryFn: ({ signal }) => api<ParticipationDTO[]>('/me/participations', { signal }) });
 
+  usePageTitle('Meus arremates');
+
   if (query.isPending) return <Spinner />;
-  if (query.isError) return <Alert tone="danger">{errorMessage(query.error)}</Alert>;
+  if (!query.data) return <LoadError title="Não foi possível carregar seus lances" error={query.error} onRetry={() => void query.refetch()} />;
 
   const current = TABS.find((t) => t.id === tab)!;
   const items = query.data.filter((item) => (current.outcomes as readonly string[]).includes(item.outcome));
@@ -52,7 +55,7 @@ export function MyBidsPage() {
         description="Lotes em que você deu lance e lotes que você venceu, com o comprovante de arremate compartilhável."
       />
 
-      <div role="tablist" className="mb-6 flex gap-1 overflow-x-auto">
+      <div role="tablist" aria-label="Situação dos seus lances" className="mb-6 grid grid-cols-3 gap-1 sm:flex">
         {TABS.map((t) => {
           const count = query.data.filter((item) => (t.outcomes as readonly string[]).includes(item.outcome)).length;
           return (
@@ -62,7 +65,7 @@ export function MyBidsPage() {
               aria-selected={tab === t.id}
               onClick={() => setTab(t.id)}
               className={clsx(
-                'shrink-0 rounded-full px-4 py-2 text-sm font-semibold',
+                'rounded-full px-1 py-2 text-xs font-semibold sm:px-4 sm:text-sm',
                 tab === t.id
                   ? 'bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900'
                   : 'text-stone-600 hover:bg-stone-200/70 dark:text-stone-400 dark:hover:bg-stone-800',
@@ -105,7 +108,9 @@ function ParticipationRow({ item }: { item: ParticipationDTO }) {
             <Badge tone={meta.tone}>{meta.label}</Badge>
             <span className="text-xs text-stone-500">Lote #{lot.number}</span>
           </div>
-          <p className="truncate font-display text-lg font-semibold">{lot.title}</p>
+          <p className="truncate font-display text-lg font-semibold" title={lot.title}>
+            {lot.title}
+          </p>
           <p className="text-xs text-stone-500">
             Seu maior lance: <strong className="text-stone-800 dark:text-stone-200">{formatBRL(item.myHighestBidCents)}</strong> · {item.myBidCount}{' '}
             {item.myBidCount === 1 ? 'lance' : 'lances'} como <code>{item.pseudonym}</code>
@@ -113,8 +118,8 @@ function ParticipationRow({ item }: { item: ParticipationDTO }) {
         </div>
       </Link>
 
-      <div className="flex flex-wrap items-center gap-4 sm:justify-end">
-        <div className="text-right">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-stone-100 pt-3 sm:justify-end sm:border-0 sm:pt-0 dark:border-stone-800">
+        <div className="sm:text-right">
           <p className="text-xs text-stone-500">{outcome === 'WON' ? 'Valor pago' : live ? 'Lance atual' : 'Último lance'}</p>
           <p className="font-semibold tabular-nums">{formatBRL(lot.currentPriceCents ?? lot.startingPriceCents)}</p>
           {live ? (
@@ -139,8 +144,8 @@ function ParticipationRow({ item }: { item: ParticipationDTO }) {
           </div>
         )}
         {outcome !== 'WON' && (
-          <Link to={`/auditoria/${lot.id}`} className={buttonClass('ghost', 'sm')} title="Auditar histórico">
-            <ShieldCheck className="size-4" />
+          <Link to={`/auditoria/${lot.id}`} className={buttonClass('ghost', 'sm')} title="Auditar histórico do lote">
+            <ShieldCheck className="size-4" /> Auditoria
           </Link>
         )}
       </div>

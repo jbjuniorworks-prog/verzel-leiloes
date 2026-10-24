@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import express, { Router } from 'express';
 import helmet from 'helmet';
 import { env } from './config/env';
+import './lib/zod-pt';
 import { errorHandler } from './lib/error-handler';
 import { notFound } from './lib/errors';
 import { prisma } from './lib/prisma';

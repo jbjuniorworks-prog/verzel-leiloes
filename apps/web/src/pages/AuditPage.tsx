@@ -15,11 +15,12 @@ import {
   type SignedChainEvent,
 } from '@leilao/shared';
 import { ItemImage, StatusBadge } from '../components/lot-bits';
-import { Alert, Badge, buttonClass, Card, EmptyState, Spinner } from '../components/ui';
+import { Alert, Badge, buttonClass, Card, EmptyState, LoadError, Spinner } from '../components/ui';
 import { useLotRoom } from '../hooks/useLotRoom';
-import { api, errorMessage } from '../lib/api';
+import { api, ApiError, errorMessage } from '../lib/api';
 import { socket } from '../lib/socket';
 import { formatBRL, formatDateTimeLong, shortHash } from '../lib/format';
+import { usePageTitle } from '../lib/page-title';
 
 const EVENT_LABEL: Record<LotEventType, string> = {
   LOT_CREATED: 'Lote criado',
@@ -80,14 +81,21 @@ export function AuditPage() {
       socket.off('lot:cancelled', refresh);
     };
   }, [id, queryClient]);
+  usePageTitle(query.data ? `Auditoria · ${query.data.lot.title}` : 'Auditoria');
 
   if (query.isPending) return <Spinner label="Carregando e verificando o histórico..." />;
-  if (query.isError) {
-    return (
-      <EmptyState title="Não foi possível auditar este lote">
-        <p>{errorMessage(query.error)}</p>
-      </EmptyState>
-    );
+  if (!query.data) {
+    if (query.error instanceof ApiError && query.error.status === 404) {
+      return (
+        <EmptyState title="Lote não encontrado">
+          <p>{errorMessage(query.error)}</p>
+          <Link to="/" className={buttonClass('secondary', 'sm', 'mt-4')}>
+            Ir para a vitrine
+          </Link>
+        </EmptyState>
+      );
+    }
+    return <LoadError title="Não foi possível auditar este lote" error={query.error} onRetry={() => void query.refetch()} />;
   }
 
   const audit = query.data;
@@ -104,10 +112,10 @@ export function AuditPage() {
 
       <div className="flex items-center gap-4">
         <ItemImage src={audit.lot.imageUrl} alt={audit.lot.title} className="aspect-[488/680] w-16 shrink-0 rounded-md" />
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-semibold tracking-[0.2em] text-amber-600 uppercase dark:text-amber-400">Auditoria pública · Lote #{audit.lot.number}</p>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">{audit.lot.title}</h1>
-          <div className="mt-1 flex items-center gap-2 text-sm text-stone-500">
+          <h1 className="font-display text-2xl font-semibold tracking-tight wrap-anywhere sm:text-3xl">{audit.lot.title}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-stone-500">
             <StatusBadge status={audit.lot.status} /> {audit.events.length} eventos registrados
           </div>
         </div>
@@ -166,9 +174,9 @@ export function AuditPage() {
       )}
 
       <Card className="overflow-hidden">
-        <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4 dark:border-stone-800">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-stone-200 px-5 py-4 dark:border-stone-800">
           <h2 className="font-display text-xl font-semibold">Cadeia de eventos</h2>
-          <span className="text-xs text-stone-500">clique em um evento para ver os dados assinados</span>
+          <span className="text-xs text-stone-500">toque em um evento para ver os dados assinados</span>
         </div>
         <ol>
           {audit.events.map((event) => (
@@ -240,34 +248,37 @@ function EventRow({
 
   return (
     <li className={clsx('border-b border-stone-100 last:border-0 dark:border-stone-800', bad && 'bg-rose-50 dark:bg-rose-950/30')}>
+      {/* Celular: tipo + valor na 1ª linha, autor, data e selos embaixo. Desktop (lg): tudo numa linha (via order). */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3 text-left text-sm"
+        className="flex w-full items-start gap-2 px-4 py-3 text-left text-sm sm:gap-3 sm:px-5 lg:items-center"
         aria-expanded={open}
       >
-        <span className="w-8 font-mono text-xs text-stone-400">#{event.seq}</span>
-        <span className="w-32 font-semibold">{EVENT_LABEL[event.type]}</span>
-        <span className="min-w-40 flex-1 text-stone-500">
-          {event.actor ? (
-            <>
-              {actorLabel} <code className="text-stone-800 dark:text-stone-200">{event.actor}</code>
-            </>
-          ) : (
-            '—'
-          )}
+        <span className="w-6 shrink-0 pt-0.5 font-mono text-xs text-stone-400 sm:w-8 lg:pt-0">#{event.seq}</span>
+        <span className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 lg:grid-cols-[7rem_minmax(0,1fr)_8rem_13rem_auto] lg:gap-x-4">
+          <span className="font-semibold">{EVENT_LABEL[event.type]}</span>
+          <span className="text-right font-semibold tabular-nums lg:order-3">{event.amountCents ? formatBRL(Number(event.amountCents)) : ''}</span>
+          <span className="col-span-2 truncate text-stone-500 lg:order-2 lg:col-span-1">
+            {event.actor ? (
+              <>
+                {actorLabel} <code className="text-stone-800 dark:text-stone-200">{event.actor}</code>
+              </>
+            ) : (
+              '—'
+            )}
+          </span>
+          <span className="col-span-2 text-xs text-stone-500 tabular-nums lg:order-4 lg:col-span-1">{formatDateTimeLong(event.occurredAt)}</span>
+          <span className="col-span-2 flex flex-wrap gap-1 lg:order-5 lg:col-span-1">
+            {check && (
+              <>
+                <Badge tone={check.hashValid ? 'success' : 'danger'}>hash</Badge>
+                <Badge tone={check.linkValid ? 'success' : 'danger'}>elo</Badge>
+                <Badge tone={check.signatureValid ? 'success' : 'danger'}>assinatura</Badge>
+              </>
+            )}
+          </span>
         </span>
-        <span className="w-32 text-right font-semibold tabular-nums">{event.amountCents ? formatBRL(Number(event.amountCents)) : ''}</span>
-        <span className="w-44 text-xs text-stone-500 tabular-nums">{formatDateTimeLong(event.occurredAt)}</span>
-        <span className="flex gap-1">
-          {check && (
-            <>
-              <Badge tone={check.hashValid ? 'success' : 'danger'}>hash</Badge>
-              <Badge tone={check.linkValid ? 'success' : 'danger'}>elo</Badge>
-              <Badge tone={check.signatureValid ? 'success' : 'danger'}>assinatura</Badge>
-            </>
-          )}
-        </span>
-        <ChevronDown className={clsx('size-4 text-stone-400 transition-transform', open && 'rotate-180')} />
+        <ChevronDown className={clsx('mt-0.5 size-4 shrink-0 text-stone-400 transition-transform lg:mt-0', open && 'rotate-180')} />
       </button>
       {open && (
         <div className="space-y-3 px-5 pb-4 text-xs">

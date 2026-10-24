@@ -7,6 +7,7 @@ import type { Role } from '@leilao/shared';
 import { useAuth } from '../auth/AuthContext';
 import { Alert, Button, Card, Field, Input } from '../components/ui';
 import { errorMessage } from '../lib/api';
+import { usePageTitle } from '../lib/page-title';
 
 const DEMO_ACCOUNTS = [
   { email: 'leiloeiro@demo.com', label: 'Leiloeiro', name: 'Casa Martelo' },
@@ -41,6 +42,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  usePageTitle('Entrar');
 
   if (user) return <Navigate to={next ?? (user.role === 'AUCTIONEER' ? '/painel' : '/')} replace />;
 
@@ -112,8 +114,11 @@ export function RegisterPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'BIDDER' as Role });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  usePageTitle('Criar conta');
 
-  if (user) return <Navigate to="/" replace />;
+  // Quem já está logado sai daqui. Durante o cadastro (loading) não: quem decide o destino
+  // (carteira ou novo lote) é o onSubmit, senão este redirecionamento chegaria primeiro.
+  if (user && !loading) return <Navigate to="/" replace />;
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -124,10 +129,11 @@ export function RegisterPage() {
       toast.success('Conta criada!', {
         description: created.role === 'BIDDER' ? 'Faça um depósito simulado para começar a dar lances.' : 'Crie seu primeiro lote.',
       });
+      // Sem setLoading(false) aqui: o React Router aplica a navegação como transição (baixa prioridade)
+      // e o loading=false renderizaria antes, disparando o <Navigate to="/"> acima por cima dela.
       navigate(created.role === 'BIDDER' ? '/carteira' : '/painel/novo-lote', { replace: true });
     } catch (err) {
       setError(errorMessage(err));
-    } finally {
       setLoading(false);
     }
   };
@@ -159,7 +165,15 @@ export function RegisterPage() {
           ))}
         </fieldset>
         <Field label="Nome" htmlFor="name" hint="Não aparece para outros usuários: em lances e comprovantes você é identificado por pseudônimo.">
-          <Input id="name" required minLength={2} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          <Input
+            id="name"
+            required
+            minLength={2}
+            maxLength={80}
+            autoComplete="name"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          />
         </Field>
         <Field label="E-mail" htmlFor="email">
           <Input id="email" type="email" autoComplete="email" required value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
@@ -171,6 +185,7 @@ export function RegisterPage() {
             autoComplete="new-password"
             required
             minLength={8}
+            maxLength={128}
             value={form.password}
             onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
           />

@@ -31,7 +31,10 @@ export function Countdown({ target, className, prefix }: { target: string; class
 
 /** Imagem do item com placeholder enquanto carrega e fallback se falhar. */
 export function ItemImage({ src, alt, className }: { src: string | null; alt: string; className?: string }) {
-  const [state, setState] = useState<'loading' | 'loaded' | 'error'>(src ? 'loading' : 'error');
+  // Guarda *qual* src carregou/falhou: trocar de imagem no mesmo componente recomeça do zero.
+  const [loaded, setLoaded] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const state = !src || failed === src ? 'error' : loaded === src ? 'loaded' : 'loading';
   return (
     <div className={clsx('relative overflow-hidden bg-stone-200 dark:bg-stone-800', className)}>
       {state !== 'error' && src && (
@@ -39,8 +42,8 @@ export function ItemImage({ src, alt, className }: { src: string | null; alt: st
           src={src}
           alt={alt}
           loading="lazy"
-          onLoad={() => setState('loaded')}
-          onError={() => setState('error')}
+          onLoad={() => setLoaded(src)}
+          onError={() => setFailed(src)}
           className={clsx('size-full object-cover transition-opacity duration-300', state === 'loaded' ? 'opacity-100' : 'opacity-0')}
         />
       )}

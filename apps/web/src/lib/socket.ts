@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import type { ClientToServerEvents, ServerToClientEvents } from '@leilao/shared';
 
@@ -11,4 +12,18 @@ export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io({
 export function reconnectSocket() {
   socket.disconnect();
   socket.connect();
+}
+
+function subscribeConnection(notify: () => void) {
+  socket.on('connect', notify);
+  socket.on('disconnect', notify);
+  return () => {
+    socket.off('connect', notify);
+    socket.off('disconnect', notify);
+  };
+}
+
+/** Se a conexão de tempo real está de pé agora. */
+export function useSocketConnected() {
+  return useSyncExternalStore(subscribeConnection, () => socket.connected);
 }

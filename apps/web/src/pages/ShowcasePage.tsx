@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import type { LotListDTO } from '@leilao/shared';
 import { LotCard } from '../components/LotCard';
-import { Alert, Button, EmptyState, inputClass, Skeleton } from '../components/ui';
-import { api, errorMessage } from '../lib/api';
+import { Button, EmptyState, inputClass, LoadError, Skeleton } from '../components/ui';
+import { api } from '../lib/api';
 
 type Tab = 'live' | 'scheduled' | 'ended';
 
@@ -25,6 +25,12 @@ const SORTS = [
   { id: 'bids', label: 'Mais disputados' },
   { id: 'newest', label: 'Mais recentes' },
 ];
+
+/** "12,50" ou "-3" digitados no filtro viram centavos válidos (ou nada), nunca um erro da API. */
+function reaisToCents(reais: string) {
+  const value = Number(reais.replace(',', '.'));
+  return reais.trim() && Number.isFinite(value) && value >= 0 ? String(Math.round(value * 100)) : null;
+}
 
 export function ShowcasePage() {
   const [params, setParams] = useSearchParams();
@@ -53,6 +59,11 @@ export function ShowcasePage() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // A URL mudou por fora (clique no logo, link "Vitrine"): o campo acompanha.
+  useEffect(() => {
+    if (q !== search.trim()) setSearch(q);
+  }, [q]);
+
   const filters = { status, q, category, sort, minReais, maxReais };
   const query = useInfiniteQuery({
     queryKey: ['lots', filters],
@@ -62,8 +73,10 @@ export function ShowcasePage() {
       if (q) search.set('q', q);
       if (category) search.set('category', category);
       if (sort) search.set('sort', sort);
-      if (minReais) search.set('minPrice', String(Number(minReais) * 100));
-      if (maxReais) search.set('maxPrice', String(Number(maxReais) * 100));
+      const minCents = reaisToCents(minReais);
+      const maxCents = reaisToCents(maxReais);
+      if (minCents) search.set('minPrice', minCents);
+      if (maxCents) search.set('maxPrice', maxCents);
       return api<LotListDTO>(`/lots?${search}`, { signal });
     },
     getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
@@ -90,7 +103,7 @@ export function ShowcasePage() {
 
       <div className="sticky top-16 z-30 -mx-4 mb-6 border-b border-stone-200 bg-stone-50/90 px-4 pt-2 pb-3 backdrop-blur sm:-mx-6 sm:px-6 dark:border-stone-800 dark:bg-stone-950/90">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div role="tablist" aria-label="Situação dos lotes" className="flex gap-1 overflow-x-auto">
+          <div role="tablist" aria-label="Situação dos lotes" className="grid grid-cols-3 gap-1 sm:flex">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -98,7 +111,7 @@ export function ShowcasePage() {
                 aria-selected={status === tab.id}
                 onClick={() => update({ status: tab.id === 'live' ? '' : tab.id })}
                 className={clsx(
-                  'flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
+                  'flex items-center justify-center gap-1.5 rounded-full px-1 py-2 text-xs font-semibold transition-colors sm:gap-2 sm:px-4 sm:text-sm',
                   status === tab.id
                     ? 'bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900'
                     : 'text-stone-600 hover:bg-stone-200/70 dark:text-stone-400 dark:hover:bg-stone-800',
@@ -144,7 +157,8 @@ export function ShowcasePage() {
               <input
                 type="number"
                 min={0}
-                inputMode="numeric"
+                step="any"
+                inputMode="decimal"
                 value={minReais}
                 onChange={(event) => update({ min: event.target.value })}
                 className={inputClass}
@@ -155,7 +169,8 @@ export function ShowcasePage() {
               <input
                 type="number"
                 min={0}
-                inputMode="numeric"
+                step="any"
+                inputMode="decimal"
                 value={maxReais}
                 onChange={(event) => update({ max: event.target.value })}
                 className={inputClass}
@@ -185,18 +200,14 @@ export function ShowcasePage() {
         )}
       </div>
 
-      {query.isError && (
-        <Alert tone="danger" title="Não foi possível carregar os lotes">
-          {errorMessage(query.error)}
-        </Alert>
-      )}
-
       {query.isPending ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }, (_, i) => (
             <Skeleton key={i} className="aspect-[3/5]" />
           ))}
         </div>
+      ) : !query.data ? (
+        <LoadError title="Não foi possível carregar os lotes" error={query.error} onRetry={() => void query.refetch()} />
       ) : lots.length === 0 ? (
         <EmptyState title={hasFilters ? 'Nenhum lote encontrado com esses filtros' : TABS.find((tab) => tab.id === status)!.empty}>
           {hasFilters ? 'Tente outros termos ou limpe os filtros.' : 'Volte daqui a pouco — novos lotes entram o tempo todo.'}

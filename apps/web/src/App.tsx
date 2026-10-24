@@ -6,6 +6,7 @@ import { useAuth } from './auth/AuthContext';
 import { Layout } from './components/Layout';
 import { buttonClass, EmptyState, Spinner } from './components/ui';
 import { useGlobalRealtime } from './hooks/useGlobalRealtime';
+import { usePageTitle } from './lib/page-title';
 import { useTheme } from './lib/theme';
 import { AuctioneerPage } from './pages/AuctioneerPage';
 import { AuditPage } from './pages/AuditPage';
@@ -36,6 +37,7 @@ function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
 }
 
 function NotFound() {
+  usePageTitle('Página não encontrada');
   return (
     <EmptyState title="Página não encontrada">
       <Link to="/" className={buttonClass('secondary', 'sm', 'mt-2')}>

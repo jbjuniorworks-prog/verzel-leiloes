@@ -39,6 +39,15 @@ describe('API HTTP', () => {
     const response = await request(app).post('/api/auth/register').send({ name: 'A', email: 'x', password: '1', role: 'BIDDER' });
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe('VALIDATION_ERROR');
+
+    // Regras sem mensagem própria também respondem em português, dizendo o campo.
+    const longName = await request(app)
+      .post('/api/auth/register')
+      .send({ name: 'a'.repeat(81), email: 'b@teste.com', password: 'senha-forte-123', role: 'BIDDER' });
+    expect(longName.body.error.message).toBe('Nome: use no máximo 80 caracteres.');
+    expect((await request(app).get('/api/lots?minPrice=-1')).body.error.message).toBe('Preço mínimo: o mínimo é 0.');
+    expect((await request(app).get('/api/lots?minPrice=10.5')).body.error.message).toBe('Preço mínimo: use um número inteiro.');
+    expect((await request(app).get('/api/lots?status=x')).body.error.message).toBe('Situação: valor inválido. Opções: live, scheduled, ended.');
   });
 
   it('papéis: leiloeiro não dá lance nem deposita; licitante não cria lote', async () => {

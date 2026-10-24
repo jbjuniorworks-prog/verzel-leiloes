@@ -1,43 +1,74 @@
 import { useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
-import { Check, Copy, Gavel, Printer, ShieldCheck, X } from 'lucide-react';
+import { Check, Copy, Fingerprint, Gavel, Printer, ShieldCheck, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { createWebAuditCrypto, verifyReceipt, type ReceiptDTO } from '@leilao/shared';
+import { createWebAuditCrypto, Ed25519UnsupportedError, verifyReceipt, type ReceiptDTO } from '@leilao/shared';
 import { ItemImage } from '../components/lot-bits';
-import { Button, buttonClass, EmptyState, Spinner } from '../components/ui';
-import { api, errorMessage } from '../lib/api';
+import { Button, buttonClass, EmptyState, LoadError, Spinner } from '../components/ui';
+import { api, ApiError, errorMessage } from '../lib/api';
 import { formatBRL, formatDateTimeLong } from '../lib/format';
+import { usePageTitle } from '../lib/page-title';
 import { copyReceiptLink } from './MyBidsPage';
+
+type BrowserCheck = 'checking' | 'valid' | 'invalid' | 'unsupported' | 'error';
+
+const BROWSER_DETAIL: Record<BrowserCheck, string> = {
+  checking: 'conferindo…',
+  valid: 'Ed25519 via WebCrypto',
+  invalid: 'assinatura não confere',
+  unsupported: 'navegador sem suporte a Ed25519',
+  error: 'não foi possível conferir aqui',
+};
 
 export function ReceiptPage() {
   const { code } = useParams();
   const query = useQuery({ queryKey: ['receipt', code], queryFn: ({ signal }) => api<ReceiptDTO>(`/receipts/${code}`, { signal }), enabled: !!code });
-  const [browserValid, setBrowserValid] = useState<boolean | null>(null);
+  const [browserCheck, setBrowserCheck] = useState<BrowserCheck>('checking');
+  usePageTitle(query.data ? `Comprovante · ${query.data.receipt.itemTitle}` : 'Comprovante');
 
   useEffect(() => {
     const data = query.data;
     if (!data) return;
-    verifyReceipt({ receipt: data.receipt, hash: data.hash, signature: data.signature, publicKey: data.publicKey }, createWebAuditCrypto())
-      .then((result) => setBrowserValid(result.valid))
-      .catch(() => setBrowserValid(null));
+    let cancelled = false;
+    // async + try: createWebAuditCrypto() lança na hora em página sem HTTPS (sem crypto.subtle).
+    (async () => {
+      try {
+        const result = await verifyReceipt(
+          { receipt: data.receipt, hash: data.hash, signature: data.signature, publicKey: data.publicKey },
+          createWebAuditCrypto(),
+        );
+        if (!cancelled) setBrowserCheck(result.valid ? 'valid' : 'invalid');
+      } catch (error) {
+        if (!cancelled) setBrowserCheck(error instanceof Ed25519UnsupportedError ? 'unsupported' : 'error');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [query.data]);
 
   if (query.isPending) return <Spinner />;
-  if (query.isError) {
-    return (
-      <EmptyState title="Comprovante não encontrado">
-        <p>{errorMessage(query.error)}</p>
-      </EmptyState>
-    );
+  if (!query.data) {
+    if (query.error instanceof ApiError && query.error.status === 404) {
+      return (
+        <EmptyState title="Comprovante não encontrado">
+          <p>Confira se o link foi copiado inteiro. {errorMessage(query.error)}</p>
+          <Link to="/" className={buttonClass('secondary', 'sm', 'mt-4')}>
+            Ir para a vitrine
+          </Link>
+        </EmptyState>
+      );
+    }
+    return <LoadError title="Não foi possível abrir o comprovante" error={query.error} onRetry={() => void query.refetch()} />;
   }
 
   const { receipt, lot, server } = query.data;
-  const valid = server.valid && lot.chainValid && browserValid !== false;
+  const valid = server.valid && lot.chainValid && browserCheck !== 'invalid';
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <article className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-xl shadow-stone-900/5 dark:border-stone-800 dark:bg-stone-900">
+      <article className="print-exact overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-xl shadow-stone-900/5 dark:border-stone-800 dark:bg-stone-900">
         <header className="flex items-center justify-between gap-4 bg-stone-900 px-6 py-5 text-white dark:bg-stone-950">
           <div className="flex items-center gap-3">
             <span className="grid size-10 place-items-center rounded-xl bg-amber-400 text-stone-950">
@@ -53,16 +84,16 @@ export function ReceiptPage() {
 
         <div className="grid gap-6 p-6 sm:grid-cols-[180px_1fr]">
           <ItemImage src={lot.imageUrl} alt={receipt.itemTitle} className="aspect-[488/680] w-40 rounded-xl shadow-lg sm:w-full" />
-          <div className="space-y-5">
+          <div className="min-w-0 space-y-5">
             <div>
               <p className="text-sm text-stone-500">Lote #{receipt.lotNumber}</p>
-              <h2 className="font-display text-3xl font-semibold">{receipt.itemTitle}</h2>
+              <h2 className="font-display text-2xl font-semibold wrap-anywhere sm:text-3xl">{receipt.itemTitle}</h2>
               {lot.subtitle && <p className="text-stone-500">{lot.subtitle}</p>}
             </div>
             <dl className="grid grid-cols-2 gap-4 text-sm">
               <div className="col-span-2 rounded-xl bg-amber-50 p-4 dark:bg-amber-950/40">
                 <dt className="text-amber-800 dark:text-amber-300">Valor arrematado</dt>
-                <dd className="font-display text-4xl font-semibold tabular-nums">{formatBRL(Number(receipt.amountCents))}</dd>
+                <dd className="font-display text-3xl font-semibold tabular-nums wrap-break-word sm:text-4xl">{formatBRL(Number(receipt.amountCents))}</dd>
               </div>
               <div>
                 <dt className="text-stone-500">Vencedor (pseudônimo)</dt>
@@ -78,7 +109,11 @@ export function ReceiptPage() {
 
         <div className="grid gap-px border-y border-stone-200 bg-stone-200 sm:grid-cols-3 dark:border-stone-800 dark:bg-stone-800">
           <Check3 ok={server.valid} label="Assinatura válida" detail="conferida pelo servidor" />
-          <Check3 ok={browserValid} label="Conferido no navegador" detail="Ed25519 via WebCrypto" />
+          <Check3
+            ok={browserCheck === 'valid' ? true : browserCheck === 'invalid' ? false : null}
+            label="Conferido no navegador"
+            detail={BROWSER_DETAIL[browserCheck]}
+          />
           <Check3 ok={lot.chainValid} label="Histórico do lote íntegro" detail={`evento de encerramento #${receipt.closeEventSeq}`} />
         </div>
 
@@ -119,8 +154,13 @@ export function ReceiptPage() {
 function Check3({ ok, label, detail }: { ok: boolean | null; label: string; detail: string }) {
   return (
     <div className="flex items-center gap-3 bg-white px-6 py-4 dark:bg-stone-900">
-      <span className={clsx('grid size-7 place-items-center rounded-full text-white', ok === null ? 'bg-stone-400' : ok ? 'bg-emerald-600' : 'bg-rose-600')}>
-        {ok === false ? <X className="size-4" /> : <Check className="size-4" />}
+      <span
+        className={clsx(
+          'grid size-7 shrink-0 place-items-center rounded-full text-white',
+          ok === null ? 'bg-stone-400' : ok ? 'bg-emerald-600' : 'bg-rose-600',
+        )}
+      >
+        {ok === null ? <Fingerprint className="size-4" /> : ok ? <Check className="size-4" /> : <X className="size-4" />}
       </span>
       <div>
         <p className="text-sm font-semibold">{label}</p>

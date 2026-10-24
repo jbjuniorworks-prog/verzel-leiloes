@@ -8,11 +8,13 @@ import { computeLotStatus, validateBid, type LotDetailDTO, type PublicBidDTO, ty
 import { SESSION_KEY, useAuth, type Session } from '../auth/AuthContext';
 import { CurrencyInput } from '../components/CurrencyInput';
 import { Countdown, ItemImage, StatusBadge } from '../components/lot-bits';
-import { Alert, Badge, Button, buttonClass, Card, EmptyState, Spinner } from '../components/ui';
+import { Alert, Badge, Button, buttonClass, Card, EmptyState, LoadError, Spinner } from '../components/ui';
 import { applyLotUpdate, useLotRoom } from '../hooks/useLotRoom';
 import { api, ApiError, errorMessage } from '../lib/api';
 import { useNow } from '../lib/clock';
 import { formatBRL, formatDateTime, formatTime, ordinal } from '../lib/format';
+import { usePageTitle } from '../lib/page-title';
+import { useSocketConnected } from '../lib/socket';
 
 const REJECTION_TITLES: Record<string, string> = {
   BELOW_MINIMUM: 'Lance abaixo do mínimo',
@@ -45,17 +47,22 @@ export function LotPage() {
     enabled: !!id,
   });
   useLotRoom(id);
+  usePageTitle(query.data?.title);
 
   if (query.isPending) return <Spinner label="Abrindo a sala do lote..." />;
-  if (query.isError || !query.data) {
-    return (
-      <EmptyState title="Lote não encontrado">
-        <p>{errorMessage(query.error)}</p>
-        <Link to="/" className={buttonClass('secondary', 'sm', 'mt-4')}>
-          Voltar para a vitrine
-        </Link>
-      </EmptyState>
-    );
+  // Só troca a sala pelo erro se não há dados: uma falha numa atualização em segundo plano mantém a sala na tela.
+  if (!query.data) {
+    if (query.error instanceof ApiError && query.error.status === 404) {
+      return (
+        <EmptyState title="Lote não encontrado">
+          <p>{errorMessage(query.error)}</p>
+          <Link to="/" className={buttonClass('secondary', 'sm', 'mt-4')}>
+            Voltar para a vitrine
+          </Link>
+        </EmptyState>
+      );
+    }
+    return <LoadError title="Não foi possível abrir a sala do lote" error={query.error} onRetry={() => void query.refetch()} />;
   }
   return <LotRoom lot={query.data} />;
 }
@@ -69,74 +76,86 @@ function LotRoom({ lot }: { lot: LotDetailDTO }) {
   const myBest = me ? (ranking.find(([bidder]) => bidder === me)?.[1] ?? null) : null;
   const isLeader = !!me && lot.leaderPseudonym === me;
 
+  // No celular a ordem muda (max-md:contents + order): imagem, título e logo em seguida o painel de lance;
+  // os detalhes do item vêm depois, para ninguém rolar a página inteira até achar o botão.
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
-      <section className="space-y-6">
-        <Link to="/" className="inline-flex items-center gap-1 text-sm text-stone-500 hover:text-stone-800 dark:hover:text-stone-200">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_400px]">
+      <section className="max-md:contents md:space-y-6">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1 justify-self-start text-sm text-stone-500 hover:text-stone-800 max-md:order-1 dark:hover:text-stone-200"
+        >
           <ArrowLeft className="size-4" /> Vitrine
         </Link>
-        <div className="grid gap-6 md:grid-cols-[minmax(0,300px)_1fr]">
-          <ItemImage src={lot.imageUrl} alt={lot.title} className="aspect-[488/680] rounded-[18px] shadow-2xl shadow-stone-900/20" />
-          <div className="space-y-5">
-            <div className="space-y-2">
+        <div className="max-md:contents md:grid md:grid-cols-[minmax(0,240px)_minmax(0,1fr)] md:gap-6 xl:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
+          <ItemImage
+            src={lot.imageUrl}
+            alt={lot.title}
+            className="mx-auto aspect-[488/680] w-full max-w-64 rounded-[18px] shadow-2xl shadow-stone-900/20 max-md:order-2 md:max-w-none"
+          />
+          <div className="max-md:contents md:space-y-5">
+            <div className="min-w-0 space-y-2 max-md:order-3">
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge status={status} />
                 <Badge>Lote #{lot.number}</Badge>
                 {lot.category && <Badge tone="warning">{lot.category}</Badge>}
               </div>
-              <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">{lot.title}</h1>
+              <h1 className="font-display text-3xl font-semibold tracking-tight wrap-anywhere sm:text-4xl">{lot.title}</h1>
               <p className="text-stone-500 dark:text-stone-400">{lot.subtitle}</p>
-              <p className="text-sm text-stone-500">
+              <p className="text-sm text-stone-500 wrap-anywhere">
                 Leiloeiro: <span className="font-medium text-stone-700 dark:text-stone-300">{lot.sellerName}</span>
               </p>
             </div>
 
-            {lot.description && <p className="leading-relaxed whitespace-pre-line text-stone-700 dark:text-stone-300">{lot.description}</p>}
+            <div className="min-w-0 space-y-5 max-md:order-5">
+              {lot.description && <p className="leading-relaxed whitespace-pre-line text-stone-700 wrap-anywhere dark:text-stone-300">{lot.description}</p>}
 
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-stone-200 p-4 text-sm dark:border-stone-800">
-              {lot.attributes.map((attribute) => (
-                <div key={attribute.label} className="min-w-0">
-                  <dt className="text-xs text-stone-500">{attribute.label}</dt>
-                  <dd className="truncate font-medium" title={attribute.value}>
-                    {attribute.value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-stone-200 p-4 text-sm dark:border-stone-800">
+                {lot.attributes.map((attribute) => (
+                  <div key={attribute.label} className="min-w-0">
+                    <dt className="text-xs text-stone-500">{attribute.label}</dt>
+                    <dd className="truncate font-medium" title={attribute.value}>
+                      {attribute.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
 
-            <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-              {[
-                ['Lance inicial', formatBRL(lot.startingPriceCents)],
-                ['Incremento mínimo', formatBRL(lot.minIncrementCents)],
-                ['Início', formatDateTime(lot.startsAt)],
-                ['Fim original', formatDateTime(lot.originalEndsAt)],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-xl bg-stone-100 p-3 dark:bg-stone-900">
-                  <dt className="text-xs text-stone-500">{label}</dt>
-                  <dd className="font-semibold tabular-nums">{value}</dd>
-                </div>
-              ))}
-            </dl>
+              <dl className="grid grid-cols-2 gap-3 text-sm">
+                {[
+                  ['Lance inicial', formatBRL(lot.startingPriceCents)],
+                  ['Incremento mínimo', formatBRL(lot.minIncrementCents)],
+                  ['Início', formatDateTime(lot.startsAt)],
+                  ['Fim original', formatDateTime(lot.originalEndsAt)],
+                ].map(([label, value]) => (
+                  <div key={label} className="min-w-0 rounded-xl bg-stone-100 p-3 dark:bg-stone-900">
+                    <dt className="text-xs text-stone-500">{label}</dt>
+                    <dd className="font-semibold tabular-nums">{value}</dd>
+                  </div>
+                ))}
+              </dl>
 
-            {lot.externalUrl && (
-              <a
-                href={lot.externalUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-amber-700 hover:underline dark:text-amber-400"
-              >
-                Ver ficha completa no Scryfall <ExternalLink className="size-3.5" />
-              </a>
-            )}
+              {lot.externalUrl && (
+                <a
+                  href={lot.externalUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-sm text-amber-700 hover:underline dark:text-amber-400"
+                >
+                  Ver ficha completa no Scryfall <ExternalLink className="size-3.5" />
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </section>
 
-      <aside className="space-y-4 lg:sticky lg:top-24 lg:row-span-2 lg:self-start">
+      {/* Fixo ao rolar só em telas altas: numa tela baixa o botão de lance ficaria cortado. */}
+      <aside className="min-w-0 space-y-4 max-md:order-4 lg:row-span-2 lg:self-start lg:tall:sticky lg:tall:top-24">
         <BidPanel lot={lot} status={status} me={me} isLeader={isLeader} myBest={myBest} position={position} />
       </aside>
 
-      <BidHistory lot={lot} me={me} />
+      <BidHistory lot={lot} status={status} me={me} className="max-md:order-6" />
     </div>
   );
 }
@@ -236,7 +255,7 @@ function BidPanel({
           <p className="text-xs font-medium tracking-wide text-stone-500 uppercase">
             {status === 'ENDED' && lot.result === 'SOLD' ? 'Arrematado por' : lot.currentPriceCents ? 'Lance atual' : 'Lance inicial'}
           </p>
-          <p key={lot.currentPriceCents} className="animate-flash rounded-md font-display text-4xl font-semibold tabular-nums">
+          <p key={lot.currentPriceCents} className="animate-flash rounded-md font-display text-3xl font-semibold tabular-nums wrap-break-word sm:text-4xl">
             {formatBRL(lot.currentPriceCents ?? lot.startingPriceCents)}
           </p>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone-500">
@@ -344,7 +363,7 @@ function BidPanel({
                     </button>
                   ))}
                 </div>
-                <p className="flex justify-between text-xs text-stone-500">
+                <p className="flex flex-wrap justify-between gap-x-3 text-xs text-stone-500">
                   <span>Mínimo: {formatBRL(lot.minimumNextBidCents)}</span>
                   <span>
                     Disponível: <strong className={clsx(amount !== null && available < amount && 'text-rose-600')}>{formatBRL(available)}</strong>
@@ -427,8 +446,18 @@ function TimeBox({ lot, status, inSnipingWindow }: { lot: LotDetailDTO; status: 
   return null;
 }
 
+/** Aguardando a liquidação. O aviso normalmente chega pelo WebSocket; consultar de tempos em tempos cobre uma conexão caída. */
+function Settling({ lotId }: { lotId: string }) {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const timer = setInterval(() => void queryClient.invalidateQueries({ queryKey: ['lot', lotId] }), 3000);
+    return () => clearInterval(timer);
+  }, [lotId, queryClient]);
+  return <Spinner className="py-2" label="Encerrado — liquidando o lote..." />;
+}
+
 function ResultBox({ lot, me }: { lot: LotDetailDTO; me: string | null }) {
-  if (!lot.closedAt) return <Spinner className="py-2" label="Encerrado — liquidando o lote..." />;
+  if (!lot.closedAt) return <Settling lotId={lot.id} />;
   if (lot.result !== 'SOLD')
     return (
       <Alert tone="info" title="Encerrado sem lances">
@@ -440,7 +469,7 @@ function ResultBox({ lot, me }: { lot: LotDetailDTO; me: string | null }) {
   return (
     <div className={clsx('space-y-3 rounded-xl p-4', iWon ? 'bg-emerald-600 text-white' : 'bg-stone-100 dark:bg-stone-800/60')}>
       <p className="flex items-center gap-2 font-semibold">
-        <Trophy className="size-5" /> {iWon ? 'Você arrematou este lote!' : `Arrematado por ${lot.leaderPseudonym}`}
+        <Trophy className="size-5 shrink-0" /> {iWon ? 'Você arrematou este lote!' : `Arrematado por ${lot.leaderPseudonym}`}
       </p>
       {lot.receiptCode && (
         <Link to={`/comprovante/${lot.receiptCode}`} className={buttonClass(iWon ? 'secondary' : 'strong', 'sm')}>
@@ -453,22 +482,33 @@ function ResultBox({ lot, me }: { lot: LotDetailDTO; me: string | null }) {
 
 /* ------------------------------------------------------------ histórico */
 
-function BidHistory({ lot, me }: { lot: LotDetailDTO; me: string | null }) {
+const EMPTY_HISTORY: Record<ReturnType<typeof computeLotStatus>, string> = {
+  LIVE: 'Nenhum lance ainda. Seja o primeiro!',
+  SCHEDULED: 'Nenhum lance ainda: os lances abrem no início do lote.',
+  ENDED: 'Nenhum lance foi dado neste lote.',
+  CANCELLED: 'Nenhum lance foi dado neste lote.',
+};
+
+function BidHistory({ lot, status, me, className }: { lot: LotDetailDTO; status: ReturnType<typeof computeLotStatus>; me: string | null; className?: string }) {
+  const connected = useSocketConnected();
   // Lances que chegaram depois da abertura da página ganham destaque.
   const seen = useRef<Set<number> | null>(null);
   if (seen.current === null) seen.current = new Set(lot.bids.map((bid) => bid.seq));
   const today = new Date().toDateString();
 
   return (
-    <Card className="p-5">
-      <div className="mb-4 flex items-center justify-between">
+    <Card className={clsx('p-5', className)}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <h2 className="font-display text-xl font-semibold">Histórico de lances</h2>
-        <span className="flex items-center gap-2 text-xs text-stone-500">
-          <span className="size-2 animate-pulse rounded-full bg-emerald-500" aria-hidden /> atualiza ao vivo
-        </span>
+        {(status === 'LIVE' || status === 'SCHEDULED') && (
+          <span className="flex items-center gap-2 text-xs text-stone-500">
+            <span className={clsx('size-2 rounded-full', connected ? 'animate-pulse bg-emerald-500' : 'bg-amber-500')} aria-hidden />
+            {connected ? 'atualiza ao vivo' : 'reconectando…'}
+          </span>
+        )}
       </div>
       {lot.bids.length === 0 ? (
-        <p className="py-6 text-center text-sm text-stone-500">Nenhum lance ainda. {lot.status === 'LIVE' ? 'Seja o primeiro!' : ''}</p>
+        <p className="py-6 text-center text-sm text-stone-500">{EMPTY_HISTORY[status]}</p>
       ) : (
         <ol className="divide-y divide-stone-100 dark:divide-stone-800">
           {lot.bids.map((bid, index) => {
@@ -486,20 +526,14 @@ function BidHistory({ lot, me }: { lot: LotDetailDTO; me: string | null }) {
                     <span className="text-xs text-stone-400">#{bid.seq}</span>
                   )}
                 </span>
-                <span className="min-w-0 flex-1">
-                  <code className={clsx('text-sm', mine && 'font-bold text-amber-700 dark:text-amber-400')}>{bid.bidder}</code>
-                  {mine && (
-                    <Badge tone="warning" className="ml-2">
-                      você
-                    </Badge>
-                  )}
-                  {bid.extendedEndsAt && (
-                    <Badge tone="info" className="ml-2">
-                      prorrogou +2 min
-                    </Badge>
-                  )}
+                <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                  <code className={clsx('min-w-0 text-[13px] wrap-anywhere sm:text-sm', mine && 'font-bold text-amber-700 dark:text-amber-400')}>
+                    {bid.bidder}
+                  </code>
+                  {mine && <Badge tone="warning">você</Badge>}
+                  {bid.extendedEndsAt && <Badge tone="info">prorrogou +2 min</Badge>}
                 </span>
-                <span className="text-right">
+                <span className="shrink-0 text-right">
                   <span className="block font-semibold tabular-nums">{formatBRL(bid.amountCents)}</span>
                   <span className="block text-xs text-stone-500 tabular-nums">
                     {new Date(bid.placedAt).toDateString() === today ? formatTime(bid.placedAt) : formatDateTime(bid.placedAt)}

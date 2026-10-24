@@ -11,6 +11,7 @@ import { Alert, Badge, Button, Card, EmptyState, Field, Input, inputClass, PageH
 import { api, ApiError, errorMessage } from '../lib/api';
 import { serverNow } from '../lib/clock';
 import { formatBRL, formatDateTime } from '../lib/format';
+import { usePageTitle } from '../lib/page-title';
 
 const SUGGESTIONS = ['Black Lotus', 'Dragon', 'Jace', 'Mox', 'Liliana', 'Force of Will'];
 
@@ -33,6 +34,7 @@ function toLocalInput(date: Date) {
 
 export function NewLotPage() {
   const [selected, setSelected] = useState<CatalogItemDTO | null>(null);
+  usePageTitle('Novo lote');
 
   return (
     <div>
@@ -151,10 +153,10 @@ function CatalogSearch({ onSelect }: { onSelect: (item: CatalogItemDTO) => void 
                   </button>
                 ))}
               </div>
-              <div className="flex justify-center gap-2">
+              <div className="flex flex-wrap justify-center gap-2">
                 {visible < query.data.items.length ? (
                   <Button variant="secondary" onClick={() => setVisible((v) => v + RESULTS_STEP)}>
-                    Mostrar mais ({query.data.items.length - visible} restantes nesta página)
+                    Mostrar mais ({query.data.items.length - visible} restantes)
                   </Button>
                 ) : (
                   <>
@@ -223,9 +225,9 @@ function LotForm({ item, onBack }: { item: CatalogItemDTO; onBack: () => void })
   };
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[300px_1fr]">
-      <div className="space-y-4">
-        <ItemImage src={item.imageUrl} alt={item.title} className="aspect-[488/680] rounded-[16px] shadow-xl" />
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="min-w-0 space-y-4">
+        <ItemImage src={item.imageUrl} alt={item.title} className="mx-auto aspect-[488/680] w-full max-w-60 rounded-[16px] shadow-xl lg:max-w-none" />
         <Card className="space-y-2 p-4 text-sm">
           {item.attributes.slice(0, 7).map((attribute) => (
             <div key={attribute.label} className="flex justify-between gap-3">
@@ -247,8 +249,8 @@ function LotForm({ item, onBack }: { item: CatalogItemDTO; onBack: () => void })
             submit();
           }}
         >
-          <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
-            <CheckCircle2 className="size-4" /> {item.title} — {item.subtitle}
+          <div className="flex items-start gap-2 text-sm text-emerald-700 dark:text-emerald-400">
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0" /> {item.title} — {item.subtitle}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -341,7 +343,7 @@ function LotForm({ item, onBack }: { item: CatalogItemDTO; onBack: () => void })
             )}
           </fieldset>
 
-          <div className="rounded-xl bg-stone-100 p-4 text-sm dark:bg-stone-800/60">
+          <div className="rounded-xl bg-stone-100 p-4 text-sm wrap-anywhere dark:bg-stone-800/60">
             <p>
               <strong>Resumo:</strong> lance inicial {startingPrice ? formatBRL(startingPrice) : '—'}, incremento {increment ? formatBRL(increment) : '—'}.
             </p>

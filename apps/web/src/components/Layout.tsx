@@ -1,10 +1,12 @@
 import clsx from 'clsx';
-import { Gavel, LogOut, Menu, Monitor, Moon, Sun, Wallet, X } from 'lucide-react';
-import { useState } from 'react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router';
+import { Gavel, LogOut, Menu, Monitor, Moon, Sun, Wallet, WifiOff, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { formatBRL } from '../lib/format';
+import { useSocketConnected } from '../lib/socket';
 import { useTheme } from '../lib/theme';
+import { ErrorBoundary } from './ErrorBoundary';
 import { buttonClass } from './ui';
 
 function ThemeToggle() {
@@ -15,6 +17,30 @@ function ThemeToggle() {
     <button onClick={cycle} className={buttonClass('ghost', 'icon')} aria-label={`${label} (clique para trocar)`} title={label}>
       <Icon className="size-4" />
     </button>
+  );
+}
+
+/** Aviso quando o WebSocket cai por mais de alguns segundos (servidor reiniciando, internet instável). */
+function ConnectionBanner() {
+  const connected = useSocketConnected();
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (connected) {
+      setShow(false);
+      return;
+    }
+    const timer = setTimeout(() => setShow(true), 4000);
+    return () => clearTimeout(timer);
+  }, [connected]);
+  if (!show) return null;
+  return (
+    <div
+      role="status"
+      className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/60 dark:text-amber-100"
+    >
+      <WifiOff className="mr-1.5 inline size-4 align-[-3px]" aria-hidden />
+      Sem conexão em tempo real. Tentando reconectar… Valores e cronômetros podem estar desatualizados.
+    </div>
   );
 }
 
@@ -29,7 +55,11 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 export function Layout() {
   const { user, session, logout } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
+
+  // Qualquer navegação (card, link, botão voltar) fecha o menu do celular.
+  useEffect(() => setOpen(false), [pathname]);
 
   const links =
     user?.role === 'AUCTIONEER'
@@ -54,16 +84,16 @@ export function Layout() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-40 border-b border-stone-200/80 bg-stone-50/85 backdrop-blur dark:border-stone-800/80 dark:bg-stone-950/85">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
+      <header className="site-header sticky top-0 z-40 border-b border-stone-200/80 bg-stone-50/85 backdrop-blur dark:border-stone-800/80 dark:bg-stone-950/85">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:gap-4">
+          <Link to="/" className="flex shrink-0 items-center gap-2" onClick={() => setOpen(false)}>
             <span className="grid size-8 place-items-center rounded-lg bg-stone-900 text-amber-400 dark:bg-amber-400 dark:text-stone-950">
               <Gavel className="size-4" />
             </span>
             <span className="font-display text-xl font-semibold tracking-tight">Martelo</span>
           </Link>
 
-          <nav className="ml-4 hidden items-center gap-1 md:flex" aria-label="Principal">
+          <nav className="ml-1 hidden shrink-0 items-center gap-1 md:flex lg:ml-4" aria-label="Principal">
             {links.map((link) => (
               <NavLink key={link.to} to={link.to} end={link.end} className={navClass}>
                 {link.label}
@@ -71,23 +101,25 @@ export function Layout() {
             ))}
           </nav>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex min-w-0 items-center gap-2">
             {user?.role === 'BIDDER' && session?.wallet && (
               <Link
                 to="/carteira"
-                className="hidden items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm sm:flex dark:border-stone-800 dark:bg-stone-900"
+                className="hidden shrink-0 items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm sm:flex dark:border-stone-800 dark:bg-stone-900"
                 title="Saldo disponível para lances"
               >
                 <Wallet className="size-4 text-amber-600 dark:text-amber-400" />
                 <span className="font-semibold tabular-nums">{formatBRL(session.wallet.availableCents)}</span>
-                <span className="text-xs text-stone-500">disponível</span>
+                <span className="hidden text-xs text-stone-500 lg:inline">disponível</span>
               </Link>
             )}
             <ThemeToggle />
             {user ? (
-              <div className="hidden items-center gap-2 md:flex">
-                <div className="text-right leading-tight">
-                  <p className="text-sm font-semibold">{user.name}</p>
+              <div className="hidden min-w-0 items-center gap-2 md:flex">
+                <div className="hidden min-w-0 text-right leading-tight lg:block">
+                  <p className="max-w-48 truncate text-sm font-semibold" title={user.name}>
+                    {user.name}
+                  </p>
                   <p className="text-xs text-stone-500">{user.role === 'AUCTIONEER' ? 'Leiloeiro' : 'Licitante'}</p>
                 </div>
                 <button onClick={handleLogout} className={buttonClass('ghost', 'icon')} aria-label="Sair" title="Sair">
@@ -124,7 +156,7 @@ export function Layout() {
                 </p>
               )}
               {user ? (
-                <button onClick={handleLogout} className={clsx(navClass({ isActive: false }), 'text-left')}>
+                <button onClick={handleLogout} className={clsx(navClass({ isActive: false }), 'text-left wrap-anywhere')}>
                   Sair ({user.name})
                 </button>
               ) : (
@@ -140,13 +172,16 @@ export function Layout() {
             </div>
           </nav>
         )}
+        <ConnectionBanner />
       </header>
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <Outlet />
+        <ErrorBoundary resetKey={pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </main>
 
-      <footer className="border-t border-stone-200 py-6 text-center text-xs text-stone-500 dark:border-stone-800">
+      <footer className="site-footer border-t border-stone-200 px-4 py-6 text-center text-xs text-stone-500 dark:border-stone-800">
         <p>
           Martelo · Casa de leilões de demonstração — dinheiro simulado. Itens e imagens via{' '}
           <a className="underline hover:text-stone-700 dark:hover:text-stone-300" href="https://scryfall.com" target="_blank" rel="noreferrer">

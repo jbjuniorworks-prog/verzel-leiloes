@@ -1,6 +1,7 @@
 import clsx from 'clsx';
-import { AlertTriangle, CheckCircle2, Info, Loader2, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, Loader2, RotateCw, XCircle } from 'lucide-react';
 import { forwardRef, useEffect, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
+import { errorMessage } from '../lib/api';
 
 /* ------------------------------------------------------------------ Button */
 
@@ -163,6 +164,20 @@ export function EmptyState({ icon, title, children }: { icon?: ReactNode; title:
   );
 }
 
+/** Falha ao carregar uma tela (rede, servidor fora): explica e oferece tentar de novo. */
+export function LoadError({ title = 'Não foi possível carregar', error, onRetry }: { title?: string; error: unknown; onRetry?: () => void }) {
+  return (
+    <EmptyState icon={<AlertTriangle className="size-8" />} title={title}>
+      <p>{errorMessage(error)}</p>
+      {onRetry && (
+        <Button variant="secondary" size="sm" className="mt-4" onClick={onRetry}>
+          <RotateCw className="size-4" /> Tentar de novo
+        </Button>
+      )}
+    </EmptyState>
+  );
+}
+
 export function Skeleton({ className }: { className?: string }) {
   return <div className={clsx('animate-pulse rounded-lg bg-stone-200 dark:bg-stone-800', className)} />;
 }
@@ -170,9 +185,9 @@ export function Skeleton({ className }: { className?: string }) {
 export function PageHeader({ eyebrow, title, description, actions }: { eyebrow?: string; title: string; description?: ReactNode; actions?: ReactNode }) {
   return (
     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div className="space-y-1">
+      <div className="min-w-0 space-y-1">
         {eyebrow && <p className="text-xs font-semibold tracking-[0.2em] text-amber-600 uppercase dark:text-amber-400">{eyebrow}</p>}
-        <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight wrap-anywhere sm:text-4xl">{title}</h1>
         {description && <p className="max-w-2xl text-stone-600 dark:text-stone-400">{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 gap-2">{actions}</div>}
