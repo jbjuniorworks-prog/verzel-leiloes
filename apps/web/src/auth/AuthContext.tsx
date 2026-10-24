@@ -30,7 +30,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Ao trocar de usuário, nada do cache do usuário anterior pode sobrar.
   const startSession = useCallback(async () => {
     queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== 'session' });
-    await queryClient.fetchQuery({ queryKey: SESSION_KEY, queryFn: fetchSession });
+    // staleTime 0: sem isso o fetchQuery devolve a sessão anônima do cache (se buscada há < 15 s)
+    // e o cabeçalho continua mostrando "Entrar" mesmo com o login feito.
+    await queryClient.fetchQuery({ queryKey: SESSION_KEY, queryFn: fetchSession, staleTime: 0 });
     reconnectSocket();
   }, [queryClient]);
 
