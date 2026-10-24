@@ -1,0 +1,217 @@
+// Valores monetários em centavos (BigInt). Datas com precisão de milissegundo
+// (Timestamptz(3)) para casar exatamente com o Date do JavaScript — isso importa
+// porque o horário dos eventos entra no hash da cadeia de auditoria.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  AUCTIONEER
+  BIDDER
+}
+
+enum LotEventType {
+  LOT_CREATED
+  BID_PLACED
+  LOT_CLOSED
+  LOT_CANCELLED
+}
+
+enum WalletTransactionType {
+  DEPOSIT
+  HOLD
+  RELEASE
+  PAYMENT
+  PAYOUT
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  wallet       Wallet?
+  lotsSelling  Lot[]               @relation("LotSeller")
+  lotsLeading  Lot[]               @relation("LotLeader")
+  lotsWon      Lot[]               @relation("LotWinner")
+  events       LotEvent[]
+  receipts     Receipt[]
+  transactions WalletTransaction[]
+
+  @@map("users")
+}
+
+/// Saldo disponível = balance - committed. Os CHECKs da migration impedem saldo negativo
+/// ou comprometido maior que o total, mesmo que algum código esqueça de validar.
+model Wallet {
+  userId         String   @id @map("user_id") @db.Uuid
+  balanceCents   BigInt   @default(0) @map("balance_cents")
+  committedCents BigInt   @default(0) @map("committed_cents")
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("wallets")
+}
+
+/// Extrato: cada movimentação de saldo ou de valor comprometido gera uma linha.
+model WalletTransaction {
+  id                  BigInt                @id @default(autoincrement())
+  userId              String                @map("user_id") @db.Uuid
+  type                WalletTransactionType
+  amountCents         BigInt                @map("amount_cents")
+  balanceAfterCents   BigInt                @map("balance_after_cents")
+  committedAfterCents BigInt                @map("committed_after_cents")
+  description         String
+  lotId               String?               @map("lot_id") @db.Uuid
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id])
+  lot  Lot? @relation(fields: [lotId], references: [id])
+
+  @@index([userId, createdAt])
+  @@map("wallet_transactions")
+}
+
+/// Cópia (snapshot) do item da API externa, feita na criação do lote. Vitrine, sala,
+/// auditoria e comprovante leem daqui — inclusive a imagem — e não dependem da API.
+model CatalogItem {
+  id                     String   @id @default(uuid()) @db.Uuid
+  source                 String
+  externalId             String   @map("external_id")
+  title                  String
+  subtitle               String?
+  description            String?
+  category               String?
+  attributes             Json
+  externalUrl            String?  @map("external_url")
+  imageUrl               String?  @map("image_url")
+  imageData              Bytes?   @map("image_data")
+  imageMime              String?  @map("image_mime")
+  referencePriceUsdCents Int?     @map("reference_price_usd_cents")
+  raw                    Json?
+  fetchedAt              DateTime @map("fetched_at") @db.Timestamptz(3)
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  lots Lot[]
+
+  @@unique([source, externalId])
+  @@map("catalog_items")
+}
+
+/// Cache persistente das buscas na API externa (fallback quando ela cai).
+model CatalogSearchCache {
+  key       String   @id
+  response  Json
+  fetchedAt DateTime @map("fetched_at") @db.Timestamptz(3)
+
+  @@map("catalog_search_cache")
+}
+
+/// Cache de itens vistos em buscas, para criar lote mesmo com a API fora do ar.
+model CatalogItemCache {
+  source     String
+  externalId String   @map("external_id")
+  data       Json
+  fetchedAt  DateTime @map("fetched_at") @db.Timestamptz(3)
+
+  @@id([source, externalId])
+  @@map("catalog_item_cache")
+}
+
+model Lot {
+  id                 String    @id @db.Uuid
+  number             Int       @unique @default(autoincrement())
+  sellerId           String    @map("seller_id") @db.Uuid
+  itemId             String    @map("item_id") @db.Uuid
+  title              String
+  description        String?
+  startingPriceCents BigInt    @map("starting_price_cents")
+  minIncrementCents  BigInt    @map("min_increment_cents")
+  startsAt           DateTime  @map("starts_at") @db.Timestamptz(3)
+  /// Fim atual (pode ter sido prorrogado pelo anti-sniping).
+  endsAt             DateTime  @map("ends_at") @db.Timestamptz(3)
+  originalEndsAt     DateTime  @map("original_ends_at") @db.Timestamptz(3)
+  extensionCount     Int       @default(0) @map("extension_count")
+  currentPriceCents  BigInt?   @map("current_price_cents")
+  leaderId           String?   @map("leader_id") @db.Uuid
+  bidCount           Int       @default(0) @map("bid_count")
+  cancelledAt        DateTime? @map("cancelled_at") @db.Timestamptz(3)
+  cancelReason       String?   @map("cancel_reason")
+  closedAt           DateTime? @map("closed_at") @db.Timestamptz(3)
+  winnerId           String?   @map("winner_id") @db.Uuid
+  finalPriceCents    BigInt?   @map("final_price_cents")
+  /// Cabeça da cadeia de auditoria, assinada: detecta remoção dos últimos eventos.
+  chainLength        Int       @map("chain_length")
+  chainHeadHash      String    @map("chain_head_hash")
+  chainHeadSignature String    @map("chain_head_signature")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  seller       User                @relation("LotSeller", fields: [sellerId], references: [id])
+  leader       User?               @relation("LotLeader", fields: [leaderId], references: [id])
+  winner       User?               @relation("LotWinner", fields: [winnerId], references: [id])
+  item         CatalogItem         @relation(fields: [itemId], references: [id])
+  events       LotEvent[]
+  receipt      Receipt?
+  transactions WalletTransaction[]
+
+  @@index([startsAt])
+  @@index([endsAt])
+  @@index([sellerId])
+  @@map("lots")
+}
+
+/// Log append-only e encadeado por hash (ver packages/shared/src/audit.ts).
+/// Um trigger no banco bloqueia UPDATE/DELETE; a detecção de adulteração, porém,
+/// não depende dele — depende dos hashes e das assinaturas.
+model LotEvent {
+  id          BigInt       @id @default(autoincrement())
+  lotId       String       @map("lot_id") @db.Uuid
+  seq         Int
+  type        LotEventType
+  occurredAt  DateTime     @map("occurred_at") @db.Timestamptz(3)
+  /// Usuário real (uso interno, nunca exposto). O público vê só o pseudônimo.
+  actorId     String?      @map("actor_id") @db.Uuid
+  actor       String?
+  amountCents BigInt?      @map("amount_cents")
+  data        Json
+  prevHash    String       @map("prev_hash")
+  hash        String       @unique
+  signature   String
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  lot       Lot   @relation(fields: [lotId], references: [id])
+  actorUser User? @relation(fields: [actorId], references: [id])
+
+  @@unique([lotId, seq])
+  @@index([actorId, type])
+  @@map("lot_events")
+}
+
+model Receipt {
+  id        String   @id @default(uuid()) @db.Uuid
+  /// Código público e não sequencial usado no link compartilhável.
+  code      String   @unique
+  lotId     String   @unique @map("lot_id") @db.Uuid
+  winnerId  String   @map("winner_id") @db.Uuid
+  content   Json
+  hash      String
+  signature String
+  issuedAt  DateTime @map("issued_at") @db.Timestamptz(3)
+
+  lot    Lot  @relation(fields: [lotId], references: [id])
+  winner User @relation(fields: [winnerId], references: [id])
+
+  @@index([winnerId])
+  @@map("receipts")
+}

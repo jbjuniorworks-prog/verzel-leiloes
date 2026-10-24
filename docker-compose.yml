@@ -1,0 +1,42 @@
+name: martelo
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: leilao
+      POSTGRES_PASSWORD: leilao
+      POSTGRES_DB: leilao
+    ports:
+      - '5433:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U leilao -d leilao']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # Aplicação completa (API + front buildado) — `docker compose up --build`
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://leilao:leilao@db:5432/leilao
+      # Chaves de DEMONSTRAÇÃO (iguais às do .env.example). Em produção, gere novas com `npm run keys:generate`.
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-troque-em-producao-0123456789abcdef}
+      AUDIT_PRIVATE_KEY: ${AUDIT_PRIVATE_KEY:-ZGV2LW9ubHktYXVkaXQta2V5LW5vdC1mb3ItcHJvZCE=}
+      PSEUDONYM_SECRET: ${PSEUDONYM_SECRET:-dev-pseudonym-secret-troque-em-producao}
+      COOKIE_SECURE: 'false'
+      SEED_ON_BOOT: 'true'
+    ports:
+      - '3000:3000'
+
+volumes:
+  db-data:

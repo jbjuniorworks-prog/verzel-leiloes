@@ -1,0 +1,520 @@
+[
+  {
+    "source": "scryfall",
+    "externalId": "4a2e428c-dd25-484c-bbc8-2d6ce10ef42c",
+    "title": "Black Lotus",
+    "subtitle": "Unlimited Edition · #233",
+    "description": "{T}, Sacrifice this artifact: Add three mana of any one color.",
+    "category": "Rara",
+    "attributes": [
+      {
+        "label": "Coleção",
+        "value": "Unlimited Edition (2ED)"
+      },
+      {
+        "label": "Número",
+        "value": "233"
+      },
+      {
+        "label": "Raridade",
+        "value": "Rara"
+      },
+      {
+        "label": "Tipo",
+        "value": "Artifact"
+      },
+      {
+        "label": "Custo de mana",
+        "value": "{0}"
+      },
+      {
+        "label": "Artista",
+        "value": "Christopher Rush"
+      },
+      {
+        "label": "Lançamento",
+        "value": "01/12/1993"
+      },
+      {
+        "label": "Acabamento",
+        "value": "Normal"
+      },
+      {
+        "label": "Idioma",
+        "value": "EN"
+      }
+    ],
+    "imageUrl": "https://cards.scryfall.io/normal/front/4/a/4a2e428c-dd25-484c-bbc8-2d6ce10ef42c.jpg?1783948539",
+    "externalUrl": "https://scryfall.com/card/2ed/233/black-lotus",
+    "referencePriceUsdCents": null
+  },
+  {
+    "source": "scryfall",
+    "externalId": "0e606072-a3aa-4300-ba90-ec92a721fa76",
+    "title": "Jace, the Mind Sculptor",
+    "subtitle": "Worldwake · #31",
+    "description": "+2: Look at the top card of target player's library. You may put that card on the bottom of that player's library.\n0: Draw three cards, then put two cards from your hand on top of your library in any order.\n−1: Return target creature to its owner's hand.\n−12: Exile all cards from target player's library, then that player shuffles their hand into their library.",
+    "category": "Mítica",
+    "attributes": [
+      {
+        "label": "Coleção",
+        "value": "Worldwake (WWK)"
+      },
+      {
+        "label": "Número",
+        "value": "31"
+      },
+      {
+        "label": "Raridade",
+        "value": "Mítica"
+      },
+      {
+        "label": "Tipo",
+        "value": "Legendary Planeswalker — Jace"
+      },
+      {
+        "label": "Custo de mana",
+        "value": "{2}{U}{U}"
+      },
+      {
+        "label": "Artista",
+        "value": "Jason Chan"
+      },
+      {
+        "label": "Lançamento",
+        "value": "05/02/2010"
+      },
+      {
+        "label": "Acabamento",
+        "value": "Normal, Foil"
+      },
+      {
+        "label": "Idioma",
+        "value": "EN"
+      },
+      {
+        "label": "Referência de mercado",
+        "value": "US$ 25,58"
+      }
+    ],
+    "imageUrl": "https://cards.scryfall.io/normal/front/0/e/0e606072-a3aa-4300-ba90-ec92a721fa76.jpg?1792506267",
+    "externalUrl": "https://scryfall.com/card/wwk/31/jace-the-mind-sculptor",
+    "referencePriceUsdCents": 2558
+  },
+  {
+    "source": "scryfall",
+    "externalId": "b5d3dcab-2260-479d-9ef6-dfb92d4f6061",
+    "title": "Lightning Bolt",
+    "subtitle": "Limited Edition Beta · #162",
+    "description": "Lightning Bolt deals 3 damage to any target.",
+    "category": "Comum",
+    "attributes": [
+      {
+        "label": "Coleção",
+        "value": "Limited Edition Beta (LEB)"
+      },
+      {
+        "label": "Número",
+        "value": "162"
+      },
+      {
+        "label": "Raridade",
+        "value": "Comum"
+      },
+      {
+        "label": "Tipo",
+        "value": "Instant"
+      },
+      {
+        "label": "Custo de mana",
+        "value": "{R}"
+      },
+      {
+        "label": "Artista",
+        "value": "Christopher Rush"
+      },
+      {
+        "label": "Lançamento",
+        "value": "04/10/1993"
+      },
+      {
+        "label": "Acabamento",
+        "value": "Normal"
+      },
+      {
+        "label": "Idioma",
+        "value": "EN"
+      },
+      {
+        "label": "Referência de mercado",
+        "value": "US$ 349,64"
+      }
+    ],
+    "imageUrl": "https://cards.scryfall.io/normal/front/b/5/b5d3dcab-2260-479d-9ef6-dfb92d4f6061.jpg?1783948623",
+    "externalUrl": "https://scryfall.com/card/leb/162/lightning-bolt",
+    "referencePriceUsdCents": 34964
+  },
+  {
+    "source": "scryfall",
+    "externalId": "c0fb91ec-20a8-4c13-9469-18885b1ecca3",
+    "title": "Sol Ring",
+    "subtitle": "Limited Edition Beta · #270",
+    "description": "{T}: Add {C}{C}.",
+    "category": "Incomum",
+    "attributes": [
+      {
+        "label": "Coleção",
+        "value": "Limited Edition Beta (LEB)"
+      },
+      {
+        "label": "Número",
+        "value": "270"
+      },
+      {
+        "label": "Raridade",
+        "value": "Incomum"
+      },
+      {
+        "label": "Tipo",
+        "value": "Artifact"
+      },
+      {
+        "label": "Custo de mana",
+        "value": "{1}"
+      },
+      {
+        "label": "Artista",
+        "value": "Mark Tedin"
+      },
+      {
+        "label": "Lançamento",
+        "value": "04/10/1993"
+      },
+      {
+        "label": "Acabamento",
+        "value": "Normal"
+      },
+      {
+        "label": "Idioma",
+        "value": "EN"
+      },
+      {
+        "label": "Referência de mercado",
+        "value": "US$ 869,99"
+      }
+    ],
+    "imageUrl": "https://cards.scryfall.io/normal/front/c/0/c0fb91ec-20a8-4c13-9469-18885b1ecca3.jpg?1783948600",
+    "externalUrl": "https://scryfall.com/card/leb/270/sol-ring",
+    "referencePriceUsdCents": 86999
+  },
+  {
+    "source": "scryfall",
+    "externalId": "ade7d00d-4e7b-46e9-ace1-63f628a589fc",
+    "title": "Time Walk",
+    "subtitle": "Unlimited Edition · #84",
+    "description": "Take an extra turn after this one.",
+    "category": "Rara",
+    "attributes": [
+      {
+        "label": "Coleção",
+        "value": "Unlimited Edition (2ED)"
+      },
+      {
+        "label": "Número",
+        "value": "84"
+      },
+      {
+        "label": "Raridade",
+        "value": "Rara"
+      },
+      {
+        "label": "Tipo",
+        "value": "Sorcery"
+      },
+      {
+        "label": "Custo de mana",
+        "value": "{1}{U}"
+      },
+      {
+        "label": "Artista",
+        "value": "Amy Weber"
+      },
+      {
+        "label": "Lançamento",
+        "value": "01/12/1993"
+      },
+      {
+        "label": "Acabamento",
+        "value": "Normal"
+      },
+      {
+        "label": "Idioma",
+        "value": "EN"
+      },
+      {
+        "label": "Referência de mercado",
+        "value": "US$ 5.719,99"
+      }
+    ],
+    "imageUrl": "https://cards.scryfall.io/normal/front/a/d/ade7d00d-4e7b-46e9-ace1-63f628a589fc.jpg?1783948572",
+    "externalUrl": "https://scryfall.com/card/2ed/84/time-walk",
+    "referencePriceUsdCents": 571999
+  },
+  {
+    "source": "scryfall",
+    "externalId": "2dd41293-d7c8-4422-9f0c-b3e96350f5c9",
+    "title": "Ancestral Recall",
+    "subtitle": "Unlimited Edition · #48",
+    "description": "Target player draws three cards.",
+    "category": "Rara",
+    "attributes": [
+      {
+        "label": "Coleção",
+        "value": "Unlimited Edition (2ED)"
+      },
+      {
+        "label": "Número",
+        "value": "48"
+      },
+      {
+        "label": "Raridade",
+        "value": "Rara"
+      },
+      {
+        "label": "Tipo",
+        "value": "Instant"
+      },
+      {
+        "label": "Custo de mana",
+        "value": "{U}"
+      },
+      {
+        "label": "Artista",
+        "value": "Mark Poole"
+      },
+      {
+        "label": "Lançamento",
+        "value": "01/12/1993"
+      },
+      {
+        "label": "Acabamento",
+        "value": "Normal"
+      },
+      {
+        "label": "Idioma",
+        "value": "EN"
+      },
+      {
+        "label": "Referência de mercado",
+        "value": "US$ 4.999,95"
+      }
+    ],
+    "imageUrl": "https://cards.scryfall.io/normal/front/2/d/2dd41293-d7c8-4422-9f0c-b3e96350f5c9.jpg?1783948580",
+    "externalUrl": "https://scryfall.com/card/2ed/48/ancestral-recall",
+    "referencePriceUsdCents": 499995
+  },
+  {
+    "source": "scryfall",
+    "externalId": "5e64822a-6817-4e1e-8155-3e95f8e3763f",
+    "title": "Shivan Dragon",
+    "subtitle": "Limited Edition Beta · #175",
+    "description": "Flying\n{R}: This creature gets +1/+0 until end of turn.",
+    "category": "Rara",
+    "attributes": [
+      {
+        "label": "Coleção",
+        "value": "Limited Edition Beta (LEB)"
+      },
+      {
+        "label": "Número",
+        "value": "175"
+      },
+      {
+        "label": "Raridade",
+        "value": "Rara"
+      },
+      {
+        "label": "Tipo",
+        "value": "Creature — Dragon"
+      },
+      {
+        "label": "Custo de mana",
+        "value": "{4}{R}{R}"
+      },
+      {
+        "label": "Artista",
+        "value": "Melissa A. Benson"
+      },
+      {
+        "label": "Lançamento",
+        "value": "04/10/1993"
+      },
+      {
+        "label": "Acabamento",
+        "value": "Normal"
+      },
+      {
+        "label": "Idioma",
+        "value": "EN"
+      }
+    ],
+    "imageUrl": "https://cards.scryfall.io/normal/front/5/e/5e64822a-6817-4e1e-8155-3e95f8e3763f.jpg?1783948619",
+    "externalUrl": "https://scryfall.com/card/leb/175/shivan-dragon",
+    "referencePriceUsdCents": null
+  },
+  {
+    "source": "scryfall",
+    "externalId": "b6876d9e-0908-43ac-8542-09c7aa02b5ba",
+    "title": "Tarmogoyf",
+    "subtitle": "Future Sight · #153",
+    "description": "Tarmogoyf's power is equal to the number of card types among cards in all graveyards and its toughness is equal to that number plus 1.",
+    "category": "Rara",
+    "attributes": [
+      {
+        "label": "Coleção",
+        "value": "Future Sight (FUT)"
+      },
+      {
+        "label": "Número",
+        "value": "153"
+      },
+      {
+        "label": "Raridade",
+        "value": "Rara"
+      },
+      {
+        "label": "Tipo",
+        "value": "Creature — Lhurgoyf"
+      },
+      {
+        "label": "Custo de mana",
+        "value": "{1}{G}"
+      },
+      {
+        "label": "Artista",
+        "value": "Justin Murray"
+      },
+      {
+        "label": "Lançamento",
+        "value": "04/05/2007"
+      },
+      {
+        "label": "Acabamento",
+        "value": "Normal, Foil"
+      },
+      {
+        "label": "Idioma",
+        "value": "EN"
+      },
+      {
+        "label": "Referência de mercado",
+        "value": "US$ 25,74"
+      }
+    ],
+    "imageUrl": "https://cards.scryfall.io/normal/front/b/6/b6876d9e-0908-43ac-8542-09c7aa02b5ba.jpg?1783943094",
+    "externalUrl": "https://scryfall.com/card/fut/153/tarmogoyf",
+    "referencePriceUsdCents": 2574
+  },
+  {
+    "source": "scryfall",
+    "externalId": "5669f9c8-2e94-47e2-a551-7efff317fb34",
+    "title": "Serra Angel",
+    "subtitle": "Limited Edition Beta · #40",
+    "description": "Flying\nVigilance (Attacking doesn't cause this creature to tap.)",
+    "category": "Incomum",
+    "attributes": [
+      {
+        "label": "Coleção",
+        "value": "Limited Edition Beta (LEB)"
+      },
+      {
+        "label": "Número",
+        "value": "40"
+      },
+      {
+        "label": "Raridade",
+        "value": "Incomum"
+      },
+      {
+        "label": "Tipo",
+        "value": "Creature — Angel"
+      },
+      {
+        "label": "Custo de mana",
+        "value": "{3}{W}{W}"
+      },
+      {
+        "label": "Artista",
+        "value": "Douglas Shuler"
+      },
+      {
+        "label": "Lançamento",
+        "value": "04/10/1993"
+      },
+      {
+        "label": "Acabamento",
+        "value": "Normal"
+      },
+      {
+        "label": "Idioma",
+        "value": "EN"
+      },
+      {
+        "label": "Referência de mercado",
+        "value": "US$ 299,99"
+      }
+    ],
+    "imageUrl": "https://cards.scryfall.io/normal/front/5/6/5669f9c8-2e94-47e2-a551-7efff317fb34.jpg?1783948647",
+    "externalUrl": "https://scryfall.com/card/leb/40/serra-angel",
+    "referencePriceUsdCents": 29999
+  },
+  {
+    "source": "scryfall",
+    "externalId": "f7d82f1d-631e-4668-9d10-7bf0ee515267",
+    "title": "Mox Sapphire",
+    "subtitle": "Unlimited Edition · #266",
+    "description": "{T}: Add {U}.",
+    "category": "Rara",
+    "attributes": [
+      {
+        "label": "Coleção",
+        "value": "Unlimited Edition (2ED)"
+      },
+      {
+        "label": "Número",
+        "value": "266"
+      },
+      {
+        "label": "Raridade",
+        "value": "Rara"
+      },
+      {
+        "label": "Tipo",
+        "value": "Artifact"
+      },
+      {
+        "label": "Custo de mana",
+        "value": "{0}"
+      },
+      {
+        "label": "Artista",
+        "value": "Dan Frazier"
+      },
+      {
+        "label": "Lançamento",
+        "value": "01/12/1993"
+      },
+      {
+        "label": "Acabamento",
+        "value": "Normal"
+      },
+      {
+        "label": "Idioma",
+        "value": "EN"
+      }
+    ],
+    "imageUrl": "https://cards.scryfall.io/normal/front/f/7/f7d82f1d-631e-4668-9d10-7bf0ee515267.jpg?1783948532",
+    "externalUrl": "https://scryfall.com/card/2ed/266/mox-sapphire",
+    "referencePriceUsdCents": null
+  }
+]
