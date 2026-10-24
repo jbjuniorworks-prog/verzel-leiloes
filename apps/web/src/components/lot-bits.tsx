@@ -10,7 +10,7 @@ const STATUS_TONE: Record<LotStatus, BadgeTone> = { LIVE: 'live', SCHEDULED: 'in
 export function StatusBadge({ status, className }: { status: LotStatus; className?: string }) {
   return (
     <Badge tone={STATUS_TONE[status]} className={className}>
-      {status === 'LIVE' && <span className="size-1.5 animate-pulse rounded-full bg-current" aria-hidden />}
+      {status === 'LIVE' && <span className="size-1.5 rounded-full bg-current motion-safe:animate-pulse" aria-hidden />}
       {LOT_STATUS_LABEL[status]}
     </Badge>
   );
@@ -44,10 +44,13 @@ export function ItemImage({ src, alt, className }: { src: string | null; alt: st
           loading="lazy"
           onLoad={() => setLoaded(src)}
           onError={() => setFailed(src)}
-          className={clsx('size-full object-cover transition-opacity duration-300', state === 'loaded' ? 'opacity-100' : 'opacity-0')}
+          className={clsx(
+            'size-full object-cover transition-opacity duration-300 motion-reduce:transition-none',
+            state === 'loaded' ? 'opacity-100' : 'opacity-0',
+          )}
         />
       )}
-      {state === 'loading' && <div className="absolute inset-0 animate-pulse bg-stone-200 dark:bg-stone-800" />}
+      {state === 'loading' && <div className="absolute inset-0 bg-stone-200 motion-safe:animate-pulse dark:bg-stone-800" />}
       {state === 'error' && <div className="absolute inset-0 grid place-items-center p-4 text-center text-xs text-stone-500">Imagem indisponível</div>}
     </div>
   );

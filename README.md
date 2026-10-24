@@ -59,8 +59,8 @@ Casa de leilões de **cartas colecionáveis de Magic: The Gathering**. O leiloei
 - **Busca e filtro de lotes:** texto (título, coleção, artista), raridade, faixa de preço, ordenação e contagem por aba.
 - **Cancelamento com estorno automático:** o leiloeiro pode cancelar mesmo com lances; o valor comprometido do líder volta na hora para o saldo disponível dele.
 - **Docker Compose:** `docker compose up --build` sobe banco + aplicação já com dados.
-- **Testes automatizados:** 74 testes (unitários + integração contra Postgres real, incluindo concorrência e adulteração).
-- **Dark mode:** claro / escuro / seguir o sistema, sem "piscar" no carregamento.
+- **Testes automatizados:** 78 testes (unitários + integração contra Postgres real, incluindo concorrência, permissões e adulteração).
+- **Dark mode:** claro / escuro / seguir o sistema, sem "piscar" no carregamento. Com "reduzir movimento" ativado no sistema, pulsos, zoom e destaques animados viram estados fixos.
 
 **Stack:** React 19 + Vite + Tailwind CSS 4 + TanStack Query · Node.js 22 + Express 5 + Prisma 6 + Socket.IO · PostgreSQL 17 · TypeScript em tudo, num monorepo com npm workspaces.
 
@@ -276,7 +276,23 @@ Cada lote tem um log append-only (`lot_events`): `LOT_CREATED` (gênese, com as 
 
 **Defesa em profundidade:** o trigger `lot_events_append_only` impede `UPDATE`/`DELETE` acidentais ou pela aplicação. A detecção, porém, **não depende dele**: um DBA pode desligá-lo, e os testes fazem justamente isso.
 
-**Limites honestos:** quem tiver a **chave privada** consegue reescrever a história. Quem restaurar o banco inteiro a partir de um backup antigo (*rollback* completo e consistente) também não é detectado só pela cadeia. Em produção, as mitigações seriam guardar a chave num KMS/HSM e **ancorar periodicamente as cabeças das cadeias fora do sistema** (log público, e-mail aos licitantes, timestamping). O comprovante, que fica com o vencedor, já carrega o hash do evento de encerramento e funciona como uma âncora parcial.
+**Como um histórico truncado se diferencia de um que terminou antes:** pela cabeça assinada guardada no lote. Ela fixa o tamanho e o último hash da cadeia. Apagar os últimos eventos deixa a cabeça apontando para um evento que não existe mais. Para "consertar" a cabeça é preciso assiná-la de novo, e isso exige a chave privada, que não está no banco.
+
+**Limites honestos** (os dois primeiros têm teste em [`audit.test.ts`](apps/api/test/audit.test.ts), em *limites conhecidos*):
+
+- **Volta a uma cabeça antiga.** A cabeça assinada de cada lote é pública: a página de auditoria mostra a cabeça a cada visita. Alguém com acesso de escrita ao banco que tenha guardado uma cabeça antiga pode fazer o lote "voltar" até ela, nesta ordem:
+  1. apagar os eventos posteriores;
+  2. recolocar a cabeça antiga;
+  3. reverter preço, líder e fim do lote.
+
+  Cada peça é genuinamente assinada, então **a cadeia sozinha não distingue isso de um lote que de fato parou ali**. Restaurar um backup antigo do banco inteiro é o caso extremo da mesma coisa.
+- **Lote encerrado tem âncora fora do banco:** o comprovante fica com o vencedor e assina o hash do evento de encerramento. Se o lote for "voltado", o comprovante continua autêntico, mas não encontra mais o encerramento na cadeia, e a verificação mostra isso. Lote ao vivo ou cancelado não tem essa âncora.
+- **Chave privada:** quem tiver a chave privada consegue reescrever a história inteira.
+
+Em produção, as mitigações seriam:
+- guardar a chave num KMS/HSM;
+- **ancorar as cabeças fora do sistema** a cada lance: log público, e-mail ao licitante com a cabeça do momento, carimbo de tempo RFC 3161;
+- fazer o navegador de quem acompanha o lote lembrar a maior cabeça que já viu, e avisar se ela "encolher".
 
 ---
 
@@ -344,13 +360,14 @@ npm test
 ```
 
 - **`packages/shared` (33 testes, unitários):** regras de lance, anti-sniping, status, conversão de dinheiro, canonicalização e verificação da cadeia contra cada tipo de adulteração.
-- **`apps/api` (41 testes, integração contra Postgres real):**
+- **`apps/api` (45 testes, integração contra Postgres real):**
   - regras de lance e saldo comprometido;
-  - **concorrência:** 8 lances simultâneos de mesmo valor → exatamente 1 aceito; lances crescentes simultâneos; o mesmo licitante em dois lotes ao mesmo tempo não compromete mais do que tem;
+  - **concorrência:** 8 lances simultâneos de mesmo valor → exatamente 1 aceito; lances crescentes simultâneos; o mesmo licitante em dois lotes ao mesmo tempo não compromete mais do que tem; **cancelamento e liquidação disputando o mesmo lote** → só uma transição vence, nunca estorno e cobrança juntos, no máximo um comprovante, e repetir não move saldo;
   - anti-sniping, liquidação, cancelamento com estorno e idempotência;
-  - **adulteração direta no banco**, com o trigger desligado (todos os cenários da tabela da seção 6);
+  - **permissões decididas pela sessão:** sem login nada privado responde; licitante não cria nem cancela lote; leiloeiro só cancela o próprio; não existe rota de liquidação; `userId`, saldo ou papel enviados no corpo são ignorados;
+  - **adulteração direta no banco**, com o trigger desligado (todos os cenários da tabela da seção 6), e os **limites conhecidos** descritos lá;
   - **API externa fora do ar** (cache, fallback, circuit breaker);
-  - rotas HTTP (papéis, validação, mensagens, sessão) e evento em tempo real via Socket.IO.
+  - rotas HTTP (papéis, validação, mensagens em português, sessão) e evento em tempo real via Socket.IO.
 
 Os testes da API usam Postgres de verdade, e não mocks, porque o que mais importa aqui (locks, transações, `CHECK`s, trigger) só existe no banco.
 

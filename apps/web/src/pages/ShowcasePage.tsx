@@ -117,7 +117,7 @@ export function ShowcasePage() {
                     : 'text-stone-600 hover:bg-stone-200/70 dark:text-stone-400 dark:hover:bg-stone-800',
                 )}
               >
-                {tab.id === 'live' && <span className="size-2 animate-pulse rounded-full bg-rose-500" aria-hidden />}
+                {tab.id === 'live' && <span className="size-2 rounded-full bg-rose-500 motion-safe:animate-pulse" aria-hidden />}
                 {tab.label}
                 {counts && <span className="rounded-full bg-stone-500/15 px-1.5 text-xs tabular-nums">{counts[tab.id]}</span>}
               </button>

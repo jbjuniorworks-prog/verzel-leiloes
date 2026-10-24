@@ -179,7 +179,7 @@ export function LoadError({ title = 'Não foi possível carregar', error, onRetr
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={clsx('animate-pulse rounded-lg bg-stone-200 dark:bg-stone-800', className)} />;
+  return <div className={clsx('rounded-lg bg-stone-200 motion-safe:animate-pulse dark:bg-stone-800', className)} />;
 }
 
 export function PageHeader({ eyebrow, title, description, actions }: { eyebrow?: string; title: string; description?: ReactNode; actions?: ReactNode }) {

@@ -137,7 +137,7 @@ function CatalogSearch({ onSelect }: { onSelect: (item: CatalogItemDTO) => void 
                   <button
                     key={item.externalId}
                     onClick={() => onSelect(item)}
-                    className="group overflow-hidden rounded-xl border border-stone-200 bg-white text-left transition hover:-translate-y-0.5 hover:border-amber-500 hover:shadow-lg dark:border-stone-800 dark:bg-stone-900"
+                    className="group overflow-hidden rounded-xl border border-stone-200 bg-white text-left transition hover:border-amber-500 hover:shadow-lg motion-safe:hover:-translate-y-0.5 dark:border-stone-800 dark:bg-stone-900"
                   >
                     <ItemImage src={item.imageUrl} alt={item.title} className="aspect-[488/680]" />
                     <div className="space-y-1 p-3">

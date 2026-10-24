@@ -14,10 +14,15 @@ export function LotCard({ lot }: { lot: LotSummaryDTO }) {
   return (
     <Link
       to={`/lotes/${lot.id}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-stone-900/5 dark:border-stone-800 dark:bg-stone-900"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white transition hover:shadow-xl hover:shadow-stone-900/5 motion-safe:hover:-translate-y-0.5 dark:border-stone-800 dark:bg-stone-900"
     >
       <div className="relative">
-        <ItemImage src={lot.imageUrl} alt={lot.title} className="aspect-[488/680] transition-transform duration-500 group-hover:scale-[1.02]" />
+        {/* Com "reduzir movimento" no sistema não há zoom nem elevação: só a sombra marca o hover. */}
+        <ItemImage
+          src={lot.imageUrl}
+          alt={lot.title}
+          className="aspect-[488/680] motion-safe:transition-transform motion-safe:duration-500 motion-safe:group-hover:scale-[1.02]"
+        />
         <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
           <StatusBadge status={status} className="shadow-sm backdrop-blur" />
           <span className="rounded-full bg-stone-950/70 px-2 py-0.5 text-xs font-semibold text-white">Lote #{lot.number}</span>

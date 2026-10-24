@@ -8,7 +8,7 @@ import { createApp } from '../src/app';
 import { placeBid } from '../src/modules/bids/bids.service';
 import { attachSocketServer } from '../src/realtime/socket';
 import { bindRealtimeServer } from '../src/realtime/emitter';
-import { createItem, createLiveLotNow, createUser, resetDatabase } from './helpers';
+import { createItem, createLiveLotNow, createUser, resetDatabase, wallet } from './helpers';
 
 const app = createApp();
 
@@ -59,6 +59,55 @@ describe('API HTTP', () => {
     expect((await auctioneer.post('/api/wallet/deposits').send({ amountCents: 10_000 })).status).toBe(403);
     expect((await bidder.post('/api/lots').send({})).status).toBe(403);
     expect((await request(app).post(`/api/lots/${live.id}/bids`).send({ amountCents: 10_000 })).status).toBe(401);
+  });
+
+  it('quem é o usuário vem da sessão: o corpo da requisição não troca usuário, saldo nem papel', async () => {
+    const { agent: owner, user: seller } = await loginAgent('AUCTIONEER');
+    const { agent: otherAuctioneer } = await loginAgent('AUCTIONEER');
+    const { agent: ana, user: anaUser } = await loginAgent('BIDDER');
+    const { user: brunoUser } = await loginAgent('BIDDER');
+    const live = await createLiveLotNow(seller.id);
+
+    // Sem sessão, nada privado responde.
+    const anonymous = request(app);
+    for (const [method, path] of [
+      ['get', '/api/wallet'],
+      ['post', '/api/wallet/deposits'],
+      ['get', '/api/me/participations'],
+      ['get', '/api/auctioneer/dashboard'],
+      ['post', '/api/lots'],
+      ['post', `/api/lots/${live.id}/cancel`],
+    ] as const) {
+      expect((await anonymous[method](path).send({})).status, `${method} ${path}`).toBe(401);
+    }
+
+    // Licitante não cancela; outro leiloeiro também não (só o dono do lote).
+    expect((await ana.post(`/api/lots/${live.id}/cancel`).send({})).body.error.code).toBe('ROLE_NOT_ALLOWED');
+    expect((await otherAuctioneer.post(`/api/lots/${live.id}/cancel`).send({})).body.error.code).toBe('NOT_OWNER');
+    expect((await ana.get('/api/auctioneer/dashboard')).status).toBe(403);
+
+    // Não existe rota de liquidação: ela só roda no agendador do servidor.
+    expect((await owner.post(`/api/lots/${live.id}/settle`).send({})).status).toBe(404);
+    expect((await owner.post(`/api/lots/${live.id}/close`).send({})).status).toBe(404);
+
+    // Campos extras no corpo são ignorados: o depósito e o lance são da Ana, nunca do Bruno.
+    await ana.post('/api/wallet/deposits').send({ amountCents: 50_000, userId: brunoUser.id, balanceCents: 999_999_999 }).expect(201);
+    const placed = await ana
+      .post(`/api/lots/${live.id}/bids`)
+      .send({ amountCents: 10_000, bidderId: brunoUser.id, userId: brunoUser.id, availableCents: 999_999_999 });
+    expect(placed.status).toBe(201);
+    expect(await wallet(anaUser.id)).toEqual({ balance: 500, committed: 100, available: 400 });
+    expect(await wallet(brunoUser.id)).toEqual({ balance: 0, committed: 0, available: 0 });
+    const lot = await owner.get(`/api/lots/${live.id}`);
+    expect(lot.body.leaderPseudonym).toBe(placed.body.bid.bidder);
+
+    // Cadastro com saldo "injetado" começa zerado.
+    const injected = request.agent(app);
+    await injected
+      .post('/api/auth/register')
+      .send({ name: 'Esperta', email: 'esperta@teste.com', password: 'senha-forte-123', role: 'BIDDER', balanceCents: 999_999_999, committedCents: -5 })
+      .expect(201);
+    expect((await injected.get('/api/wallet')).body).toMatchObject({ balanceCents: 0, committedCents: 0, availableCents: 0 });
   });
 
   it('fluxo completo pela API: criar lote, depositar, dar lance, mensagens de recusa', async () => {

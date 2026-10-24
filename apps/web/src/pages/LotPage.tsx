@@ -255,7 +255,10 @@ function BidPanel({
           <p className="text-xs font-medium tracking-wide text-stone-500 uppercase">
             {status === 'ENDED' && lot.result === 'SOLD' ? 'Arrematado por' : lot.currentPriceCents ? 'Lance atual' : 'Lance inicial'}
           </p>
-          <p key={lot.currentPriceCents} className="animate-flash rounded-md font-display text-3xl font-semibold tabular-nums wrap-break-word sm:text-4xl">
+          <p
+            key={lot.currentPriceCents}
+            className="rounded-md font-display text-3xl font-semibold tabular-nums wrap-break-word motion-safe:animate-flash sm:text-4xl"
+          >
             {formatBRL(lot.currentPriceCents ?? lot.startingPriceCents)}
           </p>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone-500">
@@ -502,7 +505,7 @@ function BidHistory({ lot, status, me, className }: { lot: LotDetailDTO; status:
         <h2 className="font-display text-xl font-semibold">Histórico de lances</h2>
         {(status === 'LIVE' || status === 'SCHEDULED') && (
           <span className="flex items-center gap-2 text-xs text-stone-500">
-            <span className={clsx('size-2 rounded-full', connected ? 'animate-pulse bg-emerald-500' : 'bg-amber-500')} aria-hidden />
+            <span className={clsx('size-2 rounded-full', connected ? 'bg-emerald-500 motion-safe:animate-pulse' : 'bg-amber-500')} aria-hidden />
             {connected ? 'atualiza ao vivo' : 'reconectando…'}
           </span>
         )}
@@ -515,9 +518,15 @@ function BidHistory({ lot, status, me, className }: { lot: LotDetailDTO; status:
             const fresh = !seen.current!.has(bid.seq);
             const mine = bid.bidder === me;
             return (
+              // Lance que chegou agora: anima (entra deslizando e pisca) ou, com "reduzir movimento",
+              // fica com um destaque fixo — a informação de "lance novo" não some junto com a animação.
               <li
                 key={bid.seq}
-                className={clsx('flex items-center gap-3 rounded-lg px-2 py-2.5', fresh && 'animate-slide-in', index === 0 && fresh && 'animate-flash')}
+                className={clsx(
+                  'flex items-center gap-3 rounded-lg px-2 py-2.5',
+                  fresh && 'motion-safe:animate-slide-in',
+                  index === 0 && fresh && 'motion-safe:animate-flash motion-reduce:bg-amber-100/70 dark:motion-reduce:bg-amber-900/30',
+                )}
               >
                 <span className="w-6 text-center">
                   {index === 0 ? (

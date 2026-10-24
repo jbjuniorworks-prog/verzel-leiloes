@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { prisma } from '../src/lib/prisma';
-import { getLotAudit } from '../src/modules/audit/audit.service';
+import { getLotAudit, getReceipt } from '../src/modules/audit/audit.service';
 import { placeBid } from '../src/modules/bids/bids.service';
+import { settleLot } from '../src/modules/settlement/settlement.service';
 import { at, createTestLot, createUser, resetDatabase, tamper } from './helpers';
 
 /**
@@ -91,5 +92,57 @@ describe('histórico à prova de adulteração', () => {
     const body = JSON.stringify(await getLotAudit(lotId));
     expect(body).not.toContain(ana.id);
     expect(body).not.toContain('@teste.com');
+  });
+});
+
+/**
+ * Limite conhecido, documentado no README (seção 6): a cabeça assinada de cada lote é pública.
+ * Quem tem acesso de escrita ao banco e guardou uma cabeça antiga pode "voltar" o lote até ela:
+ * cada peça é genuinamente assinada, então a cadeia sozinha não distingue isso de um lote que
+ * de fato parou ali. Estes testes fixam o limite e mostram onde o comprovante serve de âncora.
+ */
+describe('limites conhecidos: volta do lote a uma cabeça assinada antiga', () => {
+  beforeEach(resetDatabase);
+
+  async function scenario({ end }: { end: number }) {
+    const seller = await createUser('AUCTIONEER');
+    const ana = await createUser('BIDDER', 1_000);
+    const bruno = await createUser('BIDDER', 1_000);
+    const lot = await createTestLot(seller.id, { end });
+    await placeBid({ lotId: lot.id, bidderId: ana.id, amountCents: 10_000, now: at(0) });
+    await placeBid({ lotId: lot.id, bidderId: bruno.id, amountCents: 20_000, now: at(1) });
+    // O "atacante" guarda a cabeça pública deste momento (o que GET /api/audit/lots/:id devolve).
+    const savedHead = (await getLotAudit(lot.id)).head;
+    const savedEndsAt = (await prisma.lot.findUniqueOrThrow({ where: { id: lot.id } })).endsAt;
+    await placeBid({ lotId: lot.id, bidderId: ana.id, amountCents: 30_000, now: at(2) });
+
+    const rollBack = async (fromSeq: number) => {
+      await tamper(`DELETE FROM lot_events WHERE lot_id = '${lot.id}' AND seq >= ${fromSeq}`);
+      await prisma.$executeRawUnsafe(
+        `UPDATE lots SET chain_length = ${savedHead.length}, chain_head_hash = '${savedHead.hash}', chain_head_signature = '${savedHead.signature}',
+           current_price_cents = 20000, leader_id = '${bruno.id}', bid_count = 2, ends_at = '${savedEndsAt.toISOString()}',
+           closed_at = NULL, winner_id = NULL, final_price_cents = NULL WHERE id = '${lot.id}'`,
+      );
+    };
+    return { lot, rollBack };
+  }
+
+  it('lote ao vivo: a cadeia sozinha não detecta a volta (por isso o README recomenda ancorar fora do banco)', async () => {
+    const { lot, rollBack } = await scenario({ end: 60 });
+    await rollBack(3);
+    expect((await getLotAudit(lot.id)).server.valid).toBe(true);
+  });
+
+  it('lote encerrado: o comprovante do vencedor ancora o encerramento e denuncia a volta', async () => {
+    const { lot, rollBack } = await scenario({ end: 5 });
+    expect(await settleLot(lot.id, at(5))).toBe(true);
+    const { code } = await prisma.receipt.findUniqueOrThrow({ where: { lotId: lot.id } });
+    expect((await getReceipt(code)).lot.chainValid).toBe(true);
+
+    await rollBack(3); // apaga o último lance e o encerramento
+    expect((await getLotAudit(lot.id)).server.valid).toBe(true); // a cadeia, sozinha, parece íntegra…
+    const receipt = await getReceipt(code);
+    expect(receipt.server.valid).toBe(true); // …o comprovante continua autêntico…
+    expect(receipt.lot.chainValid).toBe(false); // …e não encontra mais o encerramento que ele assinou.
   });
 });

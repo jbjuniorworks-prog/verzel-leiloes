@@ -278,7 +278,9 @@ function EventRow({
             )}
           </span>
         </span>
-        <ChevronDown className={clsx('mt-0.5 size-4 shrink-0 text-stone-400 transition-transform lg:mt-0', open && 'rotate-180')} />
+        <ChevronDown
+          className={clsx('mt-0.5 size-4 shrink-0 text-stone-400 transition-transform motion-reduce:transition-none lg:mt-0', open && 'rotate-180')}
+        />
       </button>
       {open && (
         <div className="space-y-3 px-5 pb-4 text-xs">
@@ -312,7 +314,7 @@ function HowItWorks({ audit }: { audit: AuditDTO }) {
     <details className="group rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900">
       <summary className="flex cursor-pointer list-none items-center justify-between font-display text-xl font-semibold">
         Como esta verificação funciona
-        <ChevronDown className="size-5 text-stone-400 transition-transform group-open:rotate-180" />
+        <ChevronDown className="size-5 text-stone-400 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
       </summary>
       <div className="mt-4 space-y-4 text-sm leading-relaxed text-stone-700 dark:text-stone-300">
         <ol className="list-decimal space-y-2 pl-5">
