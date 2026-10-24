@@ -77,7 +77,7 @@ docker compose up --build
 
 Abra **http://localhost:3000**. Na primeira subida a aplicação aplica as migrations e cria os dados de demonstração (`SEED_ON_BOOT=true`). O Postgres fica exposto em `localhost:5433` (usuário/senha/banco: `leilao`).
 
-> As chaves do `docker-compose.yml` são **de demonstração** e estão no repositório de propósito, para o projeto subir sem configuração. Em produção use chaves novas (`npm run keys:generate`).
+> As chaves do `docker-compose.yml` são **de demonstração** e estão no repositório de propósito, para o projeto subir sem configuração. Elas servem **só para rodar localmente**: em produção a aplicação se recusa a iniciar com elas (quem as conhecesse poderia forjar sessões e assinaturas da auditoria). Para o deploy, gere chaves novas com `npm run keys:generate`.
 
 ### Opção B — Desenvolvimento local
 
@@ -370,6 +370,7 @@ Qualquer plataforma que rode um container com Postgres (Render, Fly.io, uma VPS 
 
 - **Prorrogação:** o novo fim é "momento do lance + 2 min", e não "fim atual + 2 min". Assim sempre restam exatos 2 minutos para reagir depois de um lance de última hora. Prorrogações são ilimitadas.
 - **Janela de lances** é `[início, fim)`: um lance exatamente no instante do fim já é recusado como encerrado.
+- **Reinício do servidor:** o estado vive no banco e o agendador roda assim que a aplicação sobe, então lotes que venceram com o servidor fora do ar são liquidados no boot, com o horário real da liquidação registrado na cadeia.
 - **Liquidação leva até ~1 s** depois do fim. Nesse intervalo a sala mostra "Encerrado — liquidando…". Lances já são recusados nesse período, porque a regra olha o relógio, não a liquidação.
 - **Lances que não lideram não comprometem saldo.** Só o líder tem valor preso; ao ser superado, o valor volta na hora.
 - **O leiloeiro não tem depósito.** A carteira dele só recebe o valor das vendas (aparece no painel). Leiloeiros não dão lance nem em lotes de outros leiloeiros.
