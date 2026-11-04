@@ -353,7 +353,7 @@ function BidPanel({
               <p className="text-sm text-stone-500">Você é o líder: não é possível cobrir o próprio lance. Se alguém superar, você será avisado aqui.</p>
             ) : (
               <>
-                <CurrencyInput large value={amount} onChange={choose} ariaLabel="Valor do lance" disabled={status !== 'LIVE'} />
+                <CurrencyInput large entry="reais" value={amount} onChange={choose} ariaLabel="Valor do lance" disabled={status !== 'LIVE'} />
                 <div className="flex flex-wrap gap-2">
                   {[
                     ['Mínimo', lot.minimumNextBidCents],
