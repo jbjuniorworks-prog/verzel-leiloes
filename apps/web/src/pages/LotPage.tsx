@@ -204,7 +204,7 @@ function BidPanel({
 
   // Se alguém cobriu e o valor digitado ficou abaixo do novo mínimo, volta a sugerir o mínimo.
   useEffect(() => {
-    if (typed?.value != null && typed.value < lot.minimumNextBidCents) setTyped(null);
+    setTyped((current) => (current?.value != null && current.value < lot.minimumNextBidCents ? null : current));
   }, [lot.minimumNextBidCents]);
 
   const mutation = useMutation({
