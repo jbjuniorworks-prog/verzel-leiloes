@@ -5,6 +5,8 @@ Casa de leilões de **cartas colecionáveis de Magic: The Gathering**. O leiloei
 > **Deploy:** https://martelo-leiloes.up.railway.app
 >
 > **Contas de demonstração** (senha `demo1234`): `leiloeiro@demo.com` · `ana@demo.com` · `bruno@demo.com`. A tela de login tem botões de acesso rápido.
+>
+> **Uso de IA:** o projeto foi desenvolvido com uso intenso de IA. O que a IA fez, o que eu fiz e como as mudanças são revisadas estão em [`docs/uso-de-ia.md`](docs/uso-de-ia.md).
 
 | Vitrine | Sala do lote (ao vivo) | Auditoria pública |
 | --- | --- | --- |
