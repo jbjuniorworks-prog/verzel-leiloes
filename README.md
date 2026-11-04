@@ -61,7 +61,7 @@ Casa de leilões de **cartas colecionáveis de Magic: The Gathering**. O leiloei
 - **Busca e filtro de lotes:** texto (título, coleção, artista), raridade, faixa de preço, ordenação e contagem por aba.
 - **Cancelamento com estorno automático:** o leiloeiro pode cancelar mesmo com lances; o valor comprometido do líder volta na hora para o saldo disponível dele.
 - **Docker Compose:** `docker compose up --build` sobe banco + aplicação já com dados.
-- **Testes automatizados:** 89 testes (unitários, de componente e de integração contra Postgres real, incluindo concorrência, permissões e adulteração).
+- **Testes automatizados:** 92 testes (unitários, de componente e de integração contra Postgres real, incluindo concorrência, permissões e adulteração).
 - **Dark mode:** claro / escuro / seguir o sistema, sem "piscar" no carregamento. Com "reduzir movimento" ativado no sistema, pulsos, zoom e destaques animados viram estados fixos.
 
 **Stack:** React 19 + Vite + Tailwind CSS 4 + TanStack Query · Node.js 22 + Express 5 + Prisma 6 + Socket.IO · PostgreSQL 17 · TypeScript em tudo, num monorepo com npm workspaces.
@@ -387,7 +387,7 @@ npm test
 ```
 
 - **`packages/shared` (33 testes, unitários):** regras de lance, anti-sniping, status, conversão de dinheiro, canonicalização e verificação da cadeia contra cada tipo de adulteração.
-- **`apps/web` (7 testes, de componente, com jsdom):** o campo de lance aceita valores em reais ("13" = R$ 13,00), e o modo padrão do campo de dinheiro continua como antes.
+- **`apps/web` (10 testes, de componente, com jsdom):** o campo de lance aceita valores em reais ("13" = R$ 13,00), e o modo padrão do campo de dinheiro continua como antes.
 - **`apps/api` (49 testes, integração contra Postgres real):**
   - regras de lance e saldo comprometido;
   - **concorrência:** 8 lances simultâneos de mesmo valor → exatamente 1 aceito; lances crescentes simultâneos; o mesmo licitante em dois lotes ao mesmo tempo não compromete mais do que tem; **cancelamento e liquidação disputando o mesmo lote** → só uma transição vence, nunca estorno e cobrança juntos, no máximo um comprovante, e repetir não move saldo;

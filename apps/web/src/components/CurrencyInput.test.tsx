@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -6,9 +6,13 @@ import { CurrencyInput } from './CurrencyInput';
 
 afterEach(cleanup);
 
+/** Permite mudar o valor "de fora", como faz um lance recebido em tempo real, sem tirar o foco do campo. */
+let setFromOutside: (cents: number | null) => void = () => {};
+
 /** Usa o campo como as páginas usam: controlado, guardando o valor em centavos. */
 function Harness({ entry, initial = null }: { entry?: 'cents' | 'reais'; initial?: number | null }) {
   const [cents, setCents] = useState<number | null>(initial);
+  setFromOutside = setCents;
   return (
     <>
       <CurrencyInput entry={entry} value={cents} onChange={setCents} ariaLabel="Valor" />
@@ -59,6 +63,31 @@ describe('CurrencyInput no modo reais (campo de lance)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Mínimo' }));
     expect(field().value).toBe('460,00');
     expect(cents()).toBe('46000');
+  });
+
+  it('valor vindo de fora com o campo ainda em foco (lance recebido em tempo real) substitui o texto', async () => {
+    render(<Harness entry="reais" />);
+    await userEvent.type(field(), '570');
+    act(() => setFromOutside(60_000));
+    expect(document.activeElement).toBe(field());
+    expect(field().value).toBe('600,00');
+    expect(cents()).toBe('60000');
+  });
+
+  it('apagar todo o campo deixa sem valor, e ele continua vazio ao sair', async () => {
+    render(<Harness entry="reais" initial={42_000} />);
+    await userEvent.clear(field());
+    expect(cents()).toBe('null');
+    expect(field().value).toBe('');
+    await userEvent.tab();
+    expect(field().value).toBe('');
+    expect(cents()).toBe('null');
+  });
+
+  it('aceita ponto como decimal ("13.5"), para teclados de celular que não mostram vírgula', async () => {
+    render(<Harness entry="reais" />);
+    await userEvent.type(field(), '13.5');
+    expect(cents()).toBe('1350');
   });
 
   it('usa o teclado decimal no celular', () => {
