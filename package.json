@@ -22,12 +22,18 @@
     "start": "npm run start -w @leilao/api",
     "test": "npm run test -w @leilao/shared && npm run test -w @leilao/api",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "concurrently": "9.2.5",
+    "eslint": "10.13.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
     "typescript": "5.9.3",
-    "prettier": "3.9.10"
+    "typescript-eslint": "8.72.0"
   }
 }

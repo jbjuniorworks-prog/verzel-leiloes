@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Os testes da API rodam contra um Postgres de verdade (locks, CHECKs e trigger não existem em mock).
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: leilao
+          POSTGRES_PASSWORD: leilao
+          POSTGRES_DB: leilao_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U leilao -d leilao_test"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgresql://leilao:leilao@localhost:5432/leilao_test
+      TEST_DATABASE_URL: postgresql://leilao:leilao@localhost:5432/leilao_test
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
