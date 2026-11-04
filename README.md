@@ -279,7 +279,7 @@ Cada lote tem um log append-only (`lot_events`): `LOT_CREATED` (gênese, com as 
 
 ### Cobertura campo a campo
 
-O que a checagem de consistência compara em cada coluna da tabela `lots`, em [`audit.service.ts`](apps/api/src/modules/audit/audit.service.ts):
+O que a auditoria do servidor confere em cada coluna da tabela `lots`. As colunas da cabeça (`chain_*`) são conferidas pela verificação da cadeia ([`audit.ts`](packages/shared/src/audit.ts)), e as demais pela checagem de consistência ([`audit.service.ts`](apps/api/src/modules/audit/audit.service.ts)):
 
 | Coluna | Conferida? | Contra o quê |
 | --- | --- | --- |
