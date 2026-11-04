@@ -20,7 +20,7 @@
     "keys:generate": "npm run keys:generate -w @leilao/api",
     "build": "npm run build -w @leilao/web && npm run build -w @leilao/api",
     "start": "npm run start -w @leilao/api",
-    "test": "npm run test -w @leilao/shared && npm run test -w @leilao/api",
+    "test": "npm run test -w @leilao/shared && npm run test -w @leilao/web && npm run test -w @leilao/api",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "format": "prettier --write .",
