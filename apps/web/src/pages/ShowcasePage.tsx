@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import type { LotListDTO } from '@leilao/shared';
 import { LotCard } from '../components/LotCard';
@@ -43,26 +43,33 @@ export function ShowcasePage() {
   const [search, setSearch] = useState(q);
   const [showFilters, setShowFilters] = useState(Boolean(category || minReais || maxReais || sort));
 
-  const update = (changes: Record<string, string>) => {
-    const next = new URLSearchParams(params);
-    for (const [key, value] of Object.entries(changes)) {
-      if (value) next.set(key, value);
-      else next.delete(key);
-    }
-    setParams(next, { replace: true });
-  };
+  const update = useCallback(
+    (changes: Record<string, string>) => {
+      const next = new URLSearchParams(params);
+      for (const [key, value] of Object.entries(changes)) {
+        if (value) next.set(key, value);
+        else next.delete(key);
+      }
+      setParams(next, { replace: true });
+    },
+    [params, setParams],
+  );
 
   // Busca com debounce: só consulta a API 350 ms depois da última tecla.
   useEffect(() => {
-    if (search === q) return;
+    if (search.trim() === q) return;
     const timer = setTimeout(() => update({ q: search.trim() }), 350);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, q, update]);
 
   // A URL mudou por fora (clique no logo, link "Vitrine"): o campo acompanha.
-  useEffect(() => {
+  // Ajustado durante a renderização, comparando com o `q` anterior: um efeito
+  // dependente de `search` rodaria a cada tecla e desfaria o que foi digitado.
+  const [syncedQ, setSyncedQ] = useState(q);
+  if (q !== syncedQ) {
+    setSyncedQ(q);
     if (q !== search.trim()) setSearch(q);
-  }, [q]);
+  }
 
   const filters = { status, q, category, sort, minReais, maxReais };
   const query = useInfiniteQuery({

@@ -17,9 +17,7 @@ export default tseslint.config(
     plugins: { 'react-hooks': reactHooks },
     rules: {
       'react-hooks/rules-of-hooks': 'error',
-      // Ainda como aviso: há três useEffect com dependências faltando (LotPage, ShowcasePage).
-      // Passa a 'error' quando forem corrigidos.
-      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/exhaustive-deps': 'error',
     },
   },
   {
