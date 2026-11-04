@@ -36,13 +36,22 @@ export async function copyReceiptLink(code: string) {
 }
 
 export function MyBidsPage() {
-  const [tab, setTab] = useState<(typeof TABS)[number]['id']>('active');
+  // null até os dados chegarem: aí a página abre na primeira aba que tem itens. Depois disso
+  // a aba só muda por clique; dados atualizados não trocam a aba de ninguém.
+  const [tab, setTab] = useState<(typeof TABS)[number]['id'] | null>(null);
   const query = useQuery({ queryKey: ['participations'], queryFn: ({ signal }) => api<ParticipationDTO[]>('/me/participations', { signal }) });
 
   usePageTitle('Meus arremates');
 
   if (query.isPending) return <Spinner />;
   if (!query.data) return <LoadError title="Não foi possível carregar seus lances" error={query.error} onRetry={() => void query.refetch()} />;
+
+  if (tab === null) {
+    const data = query.data;
+    const firstWithItems = TABS.find((t) => data.some((item) => (t.outcomes as readonly string[]).includes(item.outcome)));
+    setTab(firstWithItems?.id ?? 'active');
+    return null;
+  }
 
   const current = TABS.find((t) => t.id === tab)!;
   const items = query.data.filter((item) => (current.outcomes as readonly string[]).includes(item.outcome));
