@@ -59,7 +59,7 @@ Casa de leilões de **cartas colecionáveis de Magic: The Gathering**. O leiloei
 - **Busca e filtro de lotes:** texto (título, coleção, artista), raridade, faixa de preço, ordenação e contagem por aba.
 - **Cancelamento com estorno automático:** o leiloeiro pode cancelar mesmo com lances; o valor comprometido do líder volta na hora para o saldo disponível dele.
 - **Docker Compose:** `docker compose up --build` sobe banco + aplicação já com dados.
-- **Testes automatizados:** 79 testes (unitários + integração contra Postgres real, incluindo concorrência, permissões e adulteração).
+- **Testes automatizados:** 82 testes (unitários + integração contra Postgres real, incluindo concorrência, permissões e adulteração).
 - **Dark mode:** claro / escuro / seguir o sistema, sem "piscar" no carregamento. Com "reduzir movimento" ativado no sistema, pulsos, zoom e destaques animados viram estados fixos.
 
 **Stack:** React 19 + Vite + Tailwind CSS 4 + TanStack Query · Node.js 22 + Express 5 + Prisma 6 + Socket.IO · PostgreSQL 17 · TypeScript em tudo, num monorepo com npm workspaces.
@@ -208,7 +208,7 @@ No deploy público, o banco é compartilhado. Os dados mudam com o uso, inclusiv
 
 Decisões principais:
 
-- **Monorepo com pacote compartilhado.** As regras de lance (`validateBid`) e a verificação da cadeia (`verifyChain`) são o **mesmo código** no servidor e no navegador. A auditoria pública recalcula tudo localmente, e o front avisa na hora usando as mesmas regras (quem decide continua sendo a API).
+- **Monorepo com pacote compartilhado.** As regras de lance (`validateBid`) e a verificação da cadeia (`verifyChain`) são o **mesmo código** no servidor e no navegador. A auditoria pública refaz no navegador a verificação da cadeia (hashes, elos e assinaturas), e o front avisa na hora usando as mesmas regras (quem decide continua sendo a API).
 - **Uma origem só.** Em produção, a API serve o front buildado. Isso deixa o cookie de sessão `httpOnly` + `SameSite=Lax` e o WebSocket simples, sem CORS. Em desenvolvimento, o Vite faz proxy de `/api` e `/socket.io`.
 - **Status derivado do relógio, não de uma coluna.** `SCHEDULED`/`LIVE`/`ENDED` vêm de `startsAt`, `endsAt`, `closedAt` e `cancelledAt` ([`lot-status.ts`](packages/shared/src/lot-status.ts)). Um agendador atrasado nunca deixa um lote "ao vivo" depois da hora, porque o lance é validado contra o relógio.
 - **Express + Prisma**, sem framework mais pesado: o domínio é pequeno, e as partes críticas (locks, transações) ficam explícitas no código. O Prisma cuida de migrations e tipos; os `SELECT … FOR UPDATE` são SQL direto.
@@ -259,8 +259,10 @@ Cada lote tem um log append-only (`lot_events`): `LOT_CREATED` (gênese, com as 
 2. `hash = SHA-256(serialização)`. Mudar qualquer campo muda o hash, e o evento seguinte deixa de "apontar" para ele.
 3. Cada hash é **assinado com Ed25519**. A chave privada fica só na variável de ambiente `AUDIT_PRIVATE_KEY`, nunca no banco. A chave pública é publicada na página de auditoria e em `GET /api/audit/public-key`.
 4. O lote guarda a **cabeça da cadeia assinada** (tamanho + último hash). As assinaturas usam prefixos diferentes para evento, cabeça e comprovante, então uma não serve no lugar da outra.
-5. O servidor faz ainda **checagens de consistência** que só ele consegue: o preço atual, o líder, o fim e o vencedor do lote precisam bater com a cadeia, e cada pseudônimo precisa corresponder ao usuário interno do evento.
-6. A página pública verifica **duas vezes**: no servidor e no navegador do visitante (WebCrypto, mesmo código), usando só a chave pública. Ninguém precisa confiar no veredito do servidor.
+5. O servidor faz ainda **checagens de consistência** que só ele consegue, porque dependem de colunas internas e do segredo dos pseudônimos: as colunas do lote precisam bater com a cadeia, e cada pseudônimo precisa corresponder ao usuário interno do evento. A [cobertura campo a campo](#cobertura-campo-a-campo) mostra o que é conferido e o que ainda não é.
+6. A página pública verifica **duas vezes**: no servidor e no navegador do visitante (WebCrypto, mesmo código). O navegador refaz a verificação da **cadeia** sem depender do veredito do servidor, mas com duas ressalvas:
+   - a **chave pública vem da mesma API**. Um servidor comprometido poderia mandar outra chave junto com uma cadeia reassinada. Para não depender do servidor também nesse ponto, a chave teria de ser conferida contra uma cópia publicada num canal independente;
+   - as **checagens de consistência** (item 5) só rodam no servidor.
 
 **O que é detectado** (cada caso tem teste em [`audit.test.ts`](apps/api/test/audit.test.ts) e [`audit.test.ts` do shared](packages/shared/test/audit.test.ts)):
 
@@ -273,6 +275,28 @@ Cada lote tem um log append-only (`lot_events`): `LOT_CREATED` (gênese, com as 
 | Inserir um lance forjado | assinatura inválida + tamanho da cadeia diferente |
 | Reatribuir um lance a outro usuário (`actor_id`) | pseudônimo não corresponde ao HMAC do usuário (`STATE_MISMATCH`) |
 | Mudar preço, líder, fim, condições, título ou descrição direto na tabela `lots` | estado do lote diverge da cadeia (`STATE_MISMATCH`) |
+| Trocar o vendedor, o vencedor ou o preço final direto na tabela `lots` | estado do lote diverge da criação ou do encerramento selados (`STATE_MISMATCH`) |
+
+### Cobertura campo a campo
+
+O que a checagem de consistência compara em cada coluna da tabela `lots`, em [`audit.service.ts`](apps/api/src/modules/audit/audit.service.ts):
+
+| Coluna | Conferida? | Contra o quê |
+| --- | --- | --- |
+| `seller_id` | sim | autor do `LOT_CREATED` |
+| `item_id` | sim | item registrado no `LOT_CREATED` |
+| `title`, `description` | sim | `LOT_CREATED` |
+| `starting_price_cents`, `min_increment_cents` | sim | `LOT_CREATED` |
+| `starts_at`, `original_ends_at` | sim | `LOT_CREATED` |
+| `ends_at` | sim | fim registrado no último `BID_PLACED` (ou o fim original, sem lances) |
+| `current_price_cents`, `leader_id` | sim | valor e autor do último `BID_PLACED` |
+| `bid_count` | sim | quantidade de `BID_PLACED` |
+| `winner_id`, `final_price_cents` | sim | autor e valor do `LOT_CLOSED`; vazios enquanto o lote não encerra |
+| `chain_length`, `chain_head_hash`, `chain_head_signature` | sim | cabeça assinada (verificação da cadeia) |
+| `closed_at`, `cancelled_at` | **em parte** | só se estão preenchidos ou não (o último evento é `LOT_CLOSED` ou `LOT_CANCELLED`). O horário em si não é comparado |
+| `cancel_reason` | **não** | o motivo está assinado no `LOT_CANCELLED`, mas a coluna exibida na sala não é comparada com ele |
+| `extension_count` | **não** | dá para derivar dos lances com `extended: true`, mas a coluna exibida na sala não é comparada |
+| `number`, `created_at`, `updated_at` | **não** | metadados fora da cadeia |
 
 **Defesa em profundidade:** o trigger `lot_events_append_only` impede `UPDATE`/`DELETE` acidentais ou pela aplicação. A detecção, porém, **não depende dele**: um DBA pode desligá-lo, e os testes fazem justamente isso.
 
@@ -288,6 +312,7 @@ Cada lote tem um log append-only (`lot_events`): `LOT_CREATED` (gênese, com as 
   Cada peça é genuinamente assinada, então **a cadeia sozinha não distingue isso de um lote que de fato parou ali**. Restaurar um backup antigo do banco inteiro é o caso extremo da mesma coisa.
 - **Lote encerrado tem âncora fora do banco:** o comprovante fica com o vencedor e assina o hash do evento de encerramento. Se o lote for "voltado", o comprovante continua autêntico, mas não encontra mais o encerramento na cadeia, e a verificação mostra isso. Lote ao vivo ou cancelado não tem essa âncora.
 - **Chave privada:** quem tiver a chave privada consegue reescrever a história inteira.
+- **A auditoria detecta, mas não impede:** a liquidação não confere a consistência antes de pagar. Um `seller_id` trocado num lote ao vivo aparece como adulteração na auditoria, mas o pagamento do arremate ainda iria para o vendedor trocado.
 
 Em produção, as mitigações seriam:
 - guardar a chave num KMS/HSM;
@@ -360,7 +385,7 @@ npm test
 ```
 
 - **`packages/shared` (33 testes, unitários):** regras de lance, anti-sniping, status, conversão de dinheiro, canonicalização e verificação da cadeia contra cada tipo de adulteração.
-- **`apps/api` (46 testes, integração contra Postgres real):**
+- **`apps/api` (49 testes, integração contra Postgres real):**
   - regras de lance e saldo comprometido;
   - **concorrência:** 8 lances simultâneos de mesmo valor → exatamente 1 aceito; lances crescentes simultâneos; o mesmo licitante em dois lotes ao mesmo tempo não compromete mais do que tem; **cancelamento e liquidação disputando o mesmo lote** → só uma transição vence, nunca estorno e cobrança juntos, no máximo um comprovante, e repetir não move saldo;
   - anti-sniping, liquidação, cancelamento com estorno e idempotência;
