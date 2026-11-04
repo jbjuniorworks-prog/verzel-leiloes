@@ -25,10 +25,22 @@ export default tseslint.config(
   {
     rules: {
       // `_` no começo do nome marca parâmetro de propósito não usado (ex.: `(_req, res)`).
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' }],
-      // `declare global { namespace Express { … } }` é como se estende o Request do Express.
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    },
+  },
+  {
+    // `declare global { namespace Express { … } }` é como se estende o Request do Express.
+    files: ['apps/api/src/modules/auth/auth.middleware.ts'],
+    rules: {
       '@typescript-eslint/no-namespace': ['error', { allowDeclarations: true }],
-      // `catch {}` vazio de propósito: ex. localStorage indisponível em janela privada.
+    },
+  },
+  {
+    // Script sem build que roda antes do React: o `catch (e) {}` vazio é proposital
+    // (localStorage indisponível em janela privada → segue com o tema do sistema).
+    files: ['apps/web/public/theme-init.js'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' }],
       'no-empty': ['error', { allowEmptyCatch: true }],
     },
   },
