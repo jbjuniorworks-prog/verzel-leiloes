@@ -40,7 +40,7 @@ Casa de leilões de **cartas colecionáveis de Magic: The Gathering**. O leiloei
 
 | Requisito | Onde |
 | --- | --- |
-| Papéis leiloeiro (cria lotes, não dá lances) e licitante (deposita, dá lances, arremata) | Cadastro com escolha de papel; bloqueio na rota **e** no serviço |
+| Papéis leiloeiro (cria lotes, não dá lances) e licitante (deposita, dá lances, arremata) | Cadastro com escolha de papel. Toda rota restrita exige o papel (`requireRole`). No serviço, o lance confere o papel de novo (`placeBid`) e o cancelamento confere se o lote é do leiloeiro. Criar lote e depositar dependem só da rota |
 | Vitrine com lotes ao vivo / agendados / encerrados; cancelados não aparecem | `/` |
 | Painel do leiloeiro: buscar item na API, criar lote, cancelar lote sem lances, resultado de cada lote encerrado e total recebido | `/painel`, `/painel/novo-lote` |
 | Sala do lote ao vivo: lance atual, histórico, posição do usuário, contagem regressiva, "você está ganhando"/"você foi superado", sem recarregar | `/lotes/:id` (Socket.IO) |
