@@ -61,6 +61,9 @@ function checkConsistency(lot: Lot & { item: { externalId: string } }, rows: Lot
     for (const [label, signed, current] of terms) {
       if (signed !== current) mismatch(`As condições do lote foram alteradas: ${label} atual difere do que foi registrado na criação.`);
     }
+    // O autor da criação já é conferido contra o pseudônimo assinado; aqui ele amarra o vendedor,
+    // que é quem a liquidação paga e quem pode cancelar o lote.
+    if (lot.sellerId !== genesis.actorId) mismatch('O vendedor do lote não corresponde a quem o criou na cadeia.');
   }
 
   const bids = rows.filter((row) => row.type === 'BID_PLACED');
@@ -76,8 +79,13 @@ function checkConsistency(lot: Lot & { item: { externalId: string } }, rows: Lot
   const last = rows.at(-1);
   if (!!lot.closedAt !== (last?.type === 'LOT_CLOSED')) mismatch('O estado de encerramento do lote não corresponde à cadeia.');
   if (!!lot.cancelledAt !== (last?.type === 'LOT_CANCELLED')) mismatch('O estado de cancelamento do lote não corresponde à cadeia.');
-  if (last?.type === 'LOT_CLOSED' && (lot.winnerId ?? null) !== (last.actorId ?? null)) {
-    mismatch('O vencedor registrado no lote não corresponde ao encerramento selado.');
+  if (last?.type === 'LOT_CLOSED') {
+    if ((lot.winnerId ?? null) !== (last.actorId ?? null)) mismatch('O vencedor registrado no lote não corresponde ao encerramento selado.');
+    if ((lot.finalPriceCents ?? null)?.toString() !== (last.amountCents ?? null)?.toString()) {
+      mismatch('O preço final do lote não corresponde ao encerramento selado.');
+    }
+  } else if (lot.winnerId !== null || lot.finalPriceCents !== null) {
+    mismatch('O lote tem vencedor ou preço final, mas a cadeia não registra o encerramento.');
   }
   return issues;
 }

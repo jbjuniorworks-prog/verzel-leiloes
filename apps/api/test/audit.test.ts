@@ -93,6 +93,26 @@ describe('histórico à prova de adulteração', () => {
     expect((await issues()).codes).toEqual(['STATE_MISMATCH']);
   });
 
+  it('detecta vendedor trocado direto na tabela (a liquidação pagaria outra pessoa)', async () => {
+    const other = await createUser('AUCTIONEER');
+    await prisma.$executeRawUnsafe(`UPDATE lots SET seller_id = '${other.id}' WHERE id = '${lotId}'`);
+    expect((await issues()).codes).toEqual(['STATE_MISMATCH']);
+  });
+
+  it('detecta preço final alterado num lote encerrado (é o valor que o painel soma)', async () => {
+    expect(await settleLot(lotId, at(60))).toBe(true);
+    expect(await issues()).toEqual({ valid: true, codes: [] });
+    await prisma.$executeRawUnsafe(`UPDATE lots SET final_price_cents = 100000000 WHERE id = '${lotId}'`);
+    expect((await issues()).codes).toEqual(['STATE_MISMATCH']);
+  });
+
+  it('detecta vencedor ou preço final preenchidos num lote que ainda não encerrou', async () => {
+    await prisma.$executeRawUnsafe(`UPDATE lots SET winner_id = '${ana.id}' WHERE id = '${lotId}'`);
+    expect((await issues()).codes).toEqual(['STATE_MISMATCH']);
+    await prisma.$executeRawUnsafe(`UPDATE lots SET winner_id = NULL, final_price_cents = 30000 WHERE id = '${lotId}'`);
+    expect((await issues()).codes).toEqual(['STATE_MISMATCH']);
+  });
+
   it('a auditoria pública não expõe dados pessoais', async () => {
     const body = JSON.stringify(await getLotAudit(lotId));
     expect(body).not.toContain(ana.id);
