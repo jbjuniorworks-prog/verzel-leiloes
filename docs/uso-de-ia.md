@@ -5,7 +5,7 @@ Este projeto foi desenvolvido com uso intenso de IA. Este documento registra o q
 ## Ferramentas
 
 - **Claude Code** (Anthropic, modelo Claude Opus 5.5): escreveu o código, os testes e a documentação, rodou os testes e fez os deploys pelo terminal, sempre com a minha autorização. Os commits que ele escreveu levam a linha `Co-Authored-By: Claude Opus 5.5`.
-- **Um segundo assistente de IA, como revisor** (a partir do feedback): revisava o escopo proposto e o diff de cada PR antes da minha aprovação.
+- **ChatGPT** (OpenAI), **como revisor** (a partir do feedback): revisava o escopo proposto e o diff de cada PR antes da minha aprovação.
 
 ## A entrega original (24/10/2026)
 
